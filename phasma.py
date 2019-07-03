@@ -9,6 +9,70 @@ from scipy import signal
 from scipy.stats import f
 from scipy.interpolate import interp1d
 
+from astroquery.mast import Catalogs
+import json
+import requests
+
+
+def get_exofop_data():
+    # the text version of the exofop page
+    if identifier[:3] == "toi":
+        id_tag = "toi"
+    elif identifier[:3] == "koi":
+        id_tag = "koi"
+    else:
+        id_tag = "id"
+
+    exofop_content_link = ("https://exofop.ipac.caltech.edu/" +
+                           mission + "/download_target.php?" +
+                           id_tag + "=" + str(int(identifier)))
+    response = requests.get(exofop_content_link)
+    exofop_content = response.text.split('\n')
+
+    # get the keys for the dictionary to put the data into
+    keys_line = 0
+    for line in exofop_content:
+        if 'PLANET PARAMETERS' in line:
+            # line in file which contains the keys for the data dictionary
+            keys_line += 1
+            break
+        keys_line += 1
+    keys = [key.strip()
+            for key in exofop_content[keys_line].split('  ')
+            if key.strip() != '']
+
+
+
+
+class Phasecurve(identifier, mission):
+    """
+    Returns the phase curve of an object of interest observed by
+    Kepler or TESS.
+
+    Parameters
+    ----------
+    identifier : float or int
+        e.g. 101.01 (for TOI/KOI), 231663901 (for TIC/KIC id)
+    mission : {'tess', 'kepler'}
+
+    """
+    def __init__():
+        self.identifier = identifier
+        self.mission = mission
+
+        # query the raw light curves
+
+        # query information about the object of interest
+        self.object_info = get_exofop_data()
+
+    def write():
+        return
+
+    def plot():
+        return
+
+
+
 #load in data
 infile = sys.argv[1] #string: name of input tess .fits file
 outfile = sys.argv[2] #string: name of master output file for this planet.
@@ -128,7 +192,7 @@ selected_fluxerrs = pdc_flux_err[times_mask] # make flux_errs the same length of
 # normalize the flux error by the median function as well
 detrended_flux_err = []
 for i in range(0, len(selected_times)):
-	detrended_flux_err.append(selected_fluxerrs[i] / interpolation(selected_times[i]))
+  detrended_flux_err.append(selected_fluxerrs[i] / interpolation(selected_times[i]))
 
 # sort and grab only real values of the error
 detrended_flux_err = np.array(detrended_flux_err)
