@@ -9,9 +9,9 @@
 # from scipy.stats import f
 # from scipy.interpolate import interp1d
 
-from astroquery.mast import Catalogs
-import json
-import requests
+import astropy.units as u
+from astropy.units import cds
+cds.enable()
 
 
 class Phasecurve():
@@ -21,71 +21,66 @@ class Phasecurve():
 
     Parameters
     ----------
-    identifier : float or int
+    sector : list or tuple
+        Sector(s) of interest.
+    identifier : float or int, optional
         e.g. toi101 (for TOI/KOI), 231663901 (for TIC/KIC id)
-    mission : {'tess', 'kepler'}
+    mission : {'tess', 'kepler'}, optional
+    keep_lc_fits : bool, optional
+        Set to True if you want to save a copy of the raw light curve
+        fits file.
     """
-    def __init__(self, identifier, mission):
+    @u.quantity_input(period=u.day, transit_duration=u.hr,
+                      transit_epoch=cds.JD)
+    def __init__(self, period, transit_duration, transit_epoch, sectors,
+                 identifier='', mission='', keep_lc_fits=False):
+        self.period = period
+        self.transit_duration = transit_duration
+        self.transit_epoch = transit_epoch
+        self.sectors = sectors
         self.identifier = identifier
         self.mission = mission
+        self.keep_lc_fits = keep_lc_fits
 
         # query the raw light curves
         self.lightcurve = self.get_lightcurve()
 
-        # query information about the object of interest
-        self.object_info = self.get_exofop_info()
-
-    def get_exofop_info(self):
-        # the text version of the exofop page
-        if self.identifier[:3] == "toi":
-            id_tag = "toi"
-        elif self.identifier[:3] == "koi":
-            id_tag = "koi"
-        else:
-            id_tag = "id"
-
-        exofop_content_link = ("https://exofop.ipac.caltech.edu/" +
-                               self.mission + "/download_target.php?" +
-                               id_tag + "=" + str(self.identifier[3:]))
-        response = requests.get(exofop_content_link)
-        exofop_content = response.text.split('\n')
-
-        # get the keys for the dictionary to put the data into
-        keys_line = 0
-        for line in exofop_content:
-            if 'PLANET PARAMETERS' in line:
-                # line in file which contains the keys for the data dictionary
-                keys_line += 1
-                break
-            keys_line += 1
-        keys = [key.strip()
-                for key in exofop_content[keys_line].split('  ')
-                if key.strip() != '']
-        split_keys = [key for key in exofop_content[keys_line]]
-        split_data = [data for data in exofop_content[keys_line + 1]]
-
-        # header and data will start on same index in character list
-        indices_of_nonzero_data_keys
-        for character_i in range(len(split_data)):
-
-            if character_i == 0 and split_data[character_i] != '':
-                indices_of_nonzero_data_keys += [character_i]
-
-            
-
+        # do stuff with the lightcurve
 
     def get_lightcurve(self):
-        return
+
+        # dowload the curl file for each sector
+        curl_paths = [download_file('https://archive.stsci.edu/missions/' +
+                                    'tess/download_scripts/sector/tesscurl_' +
+                                    'sector_' + sector + '_tp.sh')
+                      for sector in sectors]
+
+        # run the associated curls for this toi
+
+        # delete the curl files to save space
+
+        # unpack the fits file
+
+        # delete the fits file to save space
+        if not keep_lc_fits:
+            os.remove(fits_file)
+
+        return time, phase, lightcurve, lightcurve_err
 
     def write(self):
-      """ Writes the phase curve to a fits file. """
-      return
+        """ Writes the phase curve to a fits file. """
+        return
 
     def plot(self):
-      """ Plots the phase curve. """
-      return
+        """ Plots the phase curve. """
+        return
 
-toi101 = Phasecurve('toi101', 'tess')
+
+period = 1.43036763 * u.day
+transit_duration = 1.638765 * u.hr
+transit_epoch = 2458326.008874 * cds.JD
+sector = [1]
+toi101 = Phasecurve(period, transit_duration, transit_epoch, sector)
 
 # #load in data
 # infile = sys.argv[1] #string: name of input tess .fits file
