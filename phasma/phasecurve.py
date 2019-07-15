@@ -30,43 +30,7 @@ class Phasecurve():
         Set to True if you want to save a copy of the raw light curve
         fits file.
     """
-    @u.quantity_input(period=u.day, transit_duration=u.hr,
-                      transit_epoch=cds.JD)
-    def __init__(self, period, transit_duration, transit_epoch, sectors,
-                 identifier='', mission='', keep_lc_fits=False):
-        self.period = period
-        self.transit_duration = transit_duration
-        self.transit_epoch = transit_epoch
-        self.sectors = sectors
-        self.identifier = identifier
-        self.mission = mission
-        self.keep_lc_fits = keep_lc_fits
-
-        # query the raw light curves
-        self.lightcurve = self.get_lightcurve()
-
-        # do stuff with the lightcurve
-
-    def _get_curl_file(self):
-        # dowload the curl file for each sector
-        curl_paths = [download_file('https://archive.stsci.edu/missions/' +
-                                    'tess/download_scripts/sector/tesscurl_' +
-                                    'sector_' + sector + '_tp.sh')
-                      for sector in sectors]
-
-        # run the associated curls for this toi
-
-        # delete the curl files to save space
-
-    def get_lightcurve(self):
-
-        # unpack the fits file
-
-        # delete the fits file to save space
-        if not keep_lc_fits:
-            os.remove(fits_file)
-
-        return time, phase, lightcurve, lightcurve_err
+    def __init__(self, target_object):
 
     def write(self):
         """ Writes the phase curve to a fits file. """
