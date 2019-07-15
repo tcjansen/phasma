@@ -36,34 +36,45 @@ define target parameters
 >>> transit_duration = 1.638765 * u.hr
 
 make the target object for phasma
+
 >>> target_object = Target(tic_id, orbital_period, transit_epoch, transit_duration)
 
 then you could do things like
+
 >>> target_object.tic_id  # can be used for convenient file naming, etc
 231663901
 
 make a phase curve object
+
 >>> target_phasecurve = Phasecurve(target_object)
 
 plot the phase curve
+
 >>> target_phasecurve.plot
 
 write the phase curve to a file
+
 >>> target_phasecurve.write(filename='custom_name.fits')
 
 fit to beer model
+
 >>> target_phasecurve.fit(model=beer)
+
 where beer is a function name such thatone can call their own function if they 
 wish
 
 fit to cosine model
+
 >>> target_phasecurve.fit(model=cosine)
 
 make a light curve object
+
 >>> target_lightcurve = Lightcurve(target_object)
 
 plot the light curve
+
 >>> target_lightcurve.plot
 
 write the light curve to a file
+
 >>> target_lightcurve.write
