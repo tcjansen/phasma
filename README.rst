@@ -30,6 +30,7 @@ Then the usage would go like:
 >>> from astropy.time import Time
 
 define target parameters
+
 >>> tic_id = '231663901'
 >>> orbital_period = 1.43036763 * u.day
 >>> transit_epoch = Time(2455392.31659, format='jd')  # approximate BJD
