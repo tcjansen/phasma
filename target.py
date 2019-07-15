@@ -26,6 +26,7 @@ class Target():
         Set to True to delete the curl files after they have been
         used. Default is False.
     """
+    @u.quantity_input(orbital_period=u.day, transit_duration=u.hr)
     def __init__(self, tic_id, orbital_period, transit_epoch,
                  transit_duration, sectors, rm_curl_files=False):
         self.tic_id = tic_id
