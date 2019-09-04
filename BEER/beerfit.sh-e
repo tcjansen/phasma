@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+
+nlines=`cat data.dat | wc -l`
+nlines=$(($nlines+1))
+period='11.058421'
+echo $nlines $period | ./beerfit
+
