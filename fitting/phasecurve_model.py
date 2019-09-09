@@ -41,7 +41,7 @@ au = const.au
 B_const = 2 * h * c ** 2 / (wls ** 5)  # constant in the planck function
 
 # Interpolate the planck function for the planet
-int_planck_f = os.getcwd() + '/integrated_planck_table_kep.dat'
+int_planck_f = os.getcwd() + '/integrated_planck_table_tess.dat'
 T_eff_lib, int_planck = np.genfromtxt(int_planck_f,
                                       usecols=(0, 1), unpack=True)
 interpolate_planck = interp1d(T_eff_lib, int_planck)
