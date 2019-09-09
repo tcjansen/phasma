@@ -69,13 +69,13 @@ class TESSPhasecurve(object):
          self.flux_err) = self._wrap()
 
         if transit_at_0:
-            self.flux, self.flux_err = _redefine_phase(self.flux, self.flux_err)
+            self.phase, self.flux, self.flux_err = self._redefine_phase()
 
         if save:
-            self.write(filename=filename)
+            self.write(filename)
 
 
-    def write(self, filename=False):
+    def write(self, filename):
         """ Writes the phase curve to a csv file. """
         if not filename:
             filename = self.tic_dir + '/phasecurve.csv'
@@ -399,6 +399,20 @@ class TESSPhasecurve(object):
 
         return trimmed_t, trimmed_flux, trimmed_flux_err
 
+    def _redefine_phase(self):
+        # # manipulate arrays such that transit occurs at phase = 0
+        firsthalf = self.phase < 0
+        lasthalf = self.phase >= 0
+
+        new_phase = np.append(self.phase[lasthalf] - 0.5,
+                              self.phase[firsthalf] + 0.5)
+        new_flux = np.append(self.flux[lasthalf],
+                             self.flux[firsthalf])
+        new_flux_err = np.append(self.flux_err[lasthalf],
+                                 self.flux_err[firsthalf])
+
+        return new_phase, new_flux, new_flux_err
+
 
 def _moving_median(x, y, y_err, window_size):
 
@@ -460,18 +474,3 @@ def _bin(x, binsize, flux, flux_err):
             binned_error = np.append(binned_error, np.array([np.nan]))
 
     return binned_x, binned_flux, binned_error
-
-
-def _redefine_phase(flux, flux_err):
-    # # manipulate arrays such that transit occurs at phase = 0
-    midpoint = int(len(flux) / 2)
-
-    first_half = flux[:midpoint]
-    last_half = flux[midpoint:]
-    new_flux = np.append(last_half, first_half)
-
-    first_half = flux_err[:midpoint]
-    last_half = flux_err[midpoint:]
-    new_flux_err = np.append(last_half, first_half)
-
-    return new_flux, new_flux_err

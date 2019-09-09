@@ -59,51 +59,59 @@ class Fit(object):
 
     def _get_params(self, model=None):
         if model=="flat":
-            return ['offset - 1 [ppm]'], 1
+            return ['offset [ppm]'], 1
         elif model=="therm":
-            return ['offset - 1 [ppm]', r'log10$A_{therm+ref}$'], 2
+            return ['offset [ppm]', r'$A_{therm+ref}$ [ppm]'], 2
         elif model=="ellip":
-            return ['offset - 1 [ppm]', r'log10$A_{ellip}$'], 2
+            return ['offset [ppm]', r'$A_{ellip}$ [ppm]'], 2
         elif model=="beam":
-            return ['offset - 1 [ppm]', r'log10$A_{beam}$'], 2
+            return ['offset [ppm]', r'$A_{beam}$ [ppm]'], 2
         elif model=="shifted_therm":
-            return ['offset - 1 [ppm]', r'log10$A_{therm+ref}$', r'$\phi$'], 3
+            return ['offset [ppm]', r'$A_{therm+ref}$ [ppm]', r'$\phi$ [ppm]'], 3
         elif model=="therm_ellip":
-            return ['offset - 1 [ppm]', r'log10$A_{therm+ref}$', r'log10$A_{ellip}$'], 3
+            return ['offset [ppm]', r'$A_{therm+ref}$ [ppm]', r'$A_{ellip}$ [ppm]'], 3
         elif model=="ellip_beam":
-            return ['offset - 1 [ppm]', r'log10$A_{ellip}$', r'log10$A_{beam}$'], 3
+            return ['offset [ppm]', r'$A_{ellip}$ [ppm]', r'$A_{beam}$ [ppm]'], 3
         elif model=="therm_beam":
-            return ['offset - 1 [ppm]', r'log10$A_{therm+ref}$', r'log10$A_{beam}$'], 3
+            return ['offset [ppm]', r'$A_{therm+ref}$ [ppm]', r'$A_{beam}$ [ppm]'], 3
         else:
             raise ValueError("The correct model type must be specified when calling for the model parameters")
 
     def _get_pos(self, theta, model=None):
         if model=="flat":
-            return [np.array([theta[0]+1e-2*np.random.randn()]) for i in range(self.nwalkers)]
+            return [np.array([theta[0] + 0.1 * np.random.randn()])
+                    for i in range(self.nwalkers)]
         elif model=="therm":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn()])
+            return [np.array([theta[0] + 0.1 * np.random.randn(),
+                              theta[1] - np.random.randn()])
                    for i in range(self.nwalkers)]
         elif model=="ellip":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn()])
+            return [np.array([theta[0] + 0.1 * np.random.randn(),
+                              theta[1] - np.random.randn()])
                    for i in range(self.nwalkers)]
         elif model=="beam":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn()])
+            return [np.array([theta[0] + 0.1 * np.random.randn(),
+                              theta[1] - np.random.randn()])
                    for i in range(self.nwalkers)]
         elif model=="shifted_therm":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn(),
-                    theta[2]+1e-2*np.random.randn()])
+            return [np.array([theta[0] + 0.1 * np.random.randn(),
+                              theta[1] - np.random.randn(),
+                              theta[2] + np.random.randn()])
                     for i in range(self.nwalkers)]
         elif model=="therm_ellip":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn(),
-                    theta[2] - 0.1 * np.random.randn()])
+            return [np.array([theta[0] + 0.1 * np.random.randn(),
+                              theta[1] - np.random.randn(),
+                              theta[2] - np.random.randn()])
                     for i in range(self.nwalkers)]
         elif model=="ellip_beam":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn(),
-                    theta[2] - 0.1 * np.random.randn()])
+            return [np.array([theta[0] + 0.1*np.random.randn(),
+                              theta[1] - np.random.randn(),
+                              theta[2] - np.random.randn()])
                     for i in range(self.nwalkers)]
         elif model=="therm_beam":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn(),
-                    theta[2] - 0.1 * np.random.randn()])
+            return [np.array([theta[0] + 0.1 * np.random.randn(),
+                              theta[1] - np.random.randn(),
+                              theta[2] - np.random.randn()])
                     for i in range(self.nwalkers)]
         else:
             raise ValueError("The correct model type must be specified when calling for the walker starting positions")
