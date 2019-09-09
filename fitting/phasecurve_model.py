@@ -1,21 +1,21 @@
-# A lot of the expressions and terminology come 
-# from Hu et al. 2015 and Cowan & Agol 2011, whom I 
+# A lot of the expressions and terminology come
+# from Hu et al. 2015 and Cowan & Agol 2011, whom I
 # would like to thank.
 #
 # Written by Tiffany Jansen
 # Columbia University Astronomy
 # Last updated April 2017
-# 
+#
 # For any questions about the code,
 # please contact Tiffany at jansent@astro.columbia.edu
-# 
-# For any questions about the science, please consult the 
+#
+# For any questions about the science, please consult the
 # following papers:
-# 
+#
 # Jansen, T. & Kipping, D. submitted to MNRAS
 # Hu, R., Demory, B.-O., Seager, S., Lewis, N.,
 # & Showman, A. P.2015, ApJ, 802, 51
-# Cowan, N. B., & Agol, E. 2011, ApJ, 726, 82 
+# Cowan, N. B., & Agol, E. 2011, ApJ, 726, 82
 
 import os
 import sys
@@ -41,7 +41,7 @@ au = const.au
 B_const = 2 * h * c ** 2 / (wls ** 5)  # constant in the planck function
 
 # Interpolate the planck function for the planet
-int_planck_f = os.getcwd() + '/integrated_planck_table.dat'
+int_planck_f = os.getcwd() + '/integrated_planck_table_kep.dat'
 T_eff_lib, int_planck = np.genfromtxt(int_planck_f,
                                       usecols=(0, 1), unpack=True)
 interpolate_planck = interp1d(T_eff_lib, int_planck)
@@ -74,12 +74,12 @@ def q_Phi_arrays(alpha, xi1, xi2):
 
     Args:
         alpha (float): phase angle of the planet in radians
-        xi1 (float): local longitude in radians designating 
+        xi1 (float): local longitude in radians designating
             the start of the region with low reflectivity
-        xi2 (float): local longitude in radians designating 
+        xi2 (float): local longitude in radians designating
             the end of the region with low reflectivity
 
-    Returns: 
+    Returns:
         array
     """
     q = phase_integral(xi1, xi2)[0]  # excluding integral errors
@@ -105,12 +105,12 @@ def plot_q_xi1xi2():
     return
 
 def reflectivity(Ab, kappa, q):
-    """The reflectivity parameters determined by the Bond Albedo and the 
-    phase integral for the patchy atmosphere scenerio. 
+    """The reflectivity parameters determined by the Bond Albedo and the
+    phase integral for the patchy atmosphere scenerio.
 
     Args:
-        Ab (float): bond albedo 
-        kappa (float): reflectivity boosting factor. < 1 for dark patch, 
+        Ab (float): bond albedo
+        kappa (float): reflectivity boosting factor. < 1 for dark patch,
             >1 for bright patch
         q (float): value of the phase integral at one angle
 
@@ -133,9 +133,9 @@ def phase_function(alpha, xi1, xi2):
 
     Args:
         alpha (float): phase angle of the planet in radians
-        xi1 (float): local longitude in radians designating 
+        xi1 (float): local longitude in radians designating
             the start of the region with low reflectivity
-        xi2 (float): local longitude in radians designating 
+        xi2 (float): local longitude in radians designating
             the end of the region with low reflectivity
 
     Returns:
@@ -179,14 +179,14 @@ def phase_integrand(alpha, xi1, xi2):
 
 
 def phase_integral(xi1, xi2):
-    """Integrates the phase function with respect to phase angle to account for 
+    """Integrates the phase function with respect to phase angle to account for
     the additional asymmetric reflection in the patchy cloud scenerio.
 
     Args:
         alpha (float): phase angle of the planet in radians
-        xi1 (float): local longitude in radians designating 
+        xi1 (float): local longitude in radians designating
             the start of the region with low reflectivity
-        xi2 (float): local longitude in radians designating 
+        xi2 (float): local longitude in radians designating
             the end of the region with low reflectivity
 
     Returns:
@@ -198,7 +198,7 @@ def phase_integral(xi1, xi2):
 def antisym_reflection(Ag, kappa, phase, xi1, xi2, Rp, semi_a):
     """Antisymmetric reflection component of the phase curve.
 
-    Args: 
+    Args:
 
     Returns:
         array, normalized by host flux
@@ -219,10 +219,10 @@ def antisym_reflection(Ag, kappa, phase, xi1, xi2, Rp, semi_a):
 
 def dP_dXi(P, xi, eps):
     """Expression for the derivative of the thermal phase function P with respect
-    to the local longitude xi. 
+    to the local longitude xi.
 
     Note:
-        This can't be solved analytically, which is why P is solved by 
+        This can't be solved analytically, which is why P is solved by
         scipy's odeint in thermal_phase_func().
 
     Args:
@@ -230,7 +230,7 @@ def dP_dXi(P, xi, eps):
         xi (array/float): local longitude in radians
         eps (float): thermal redistribution factor
 
-    Returns: 
+    Returns:
         array
     """
     return 1 / eps * (0.5 * (np.cos(xi) + abs(np.cos(xi))) - P**4)
@@ -251,7 +251,7 @@ def thermal_phase_func(eps, phase):
     P_dawn = (np.pi + g**(1/3))**(-1/4) # initial condition for P
     P = odeint(dP_dXi, P_dawn, xi, args=(eps,))
     P = np.array(P).ravel()
-    
+
     return P
 
 def analytic_P(phase, eps):
@@ -263,7 +263,7 @@ def analytic_P(phase, eps):
 
     day = (xi > -np.pi / 2) & (xi < np.pi / 2)
     night = (xi > np.pi / 2) & (xi < 3 * np.pi / 2)
- 
+
     Pday = 3 / 4 * T0 + (gamma * np.cos(xi[day]) \
          + np.sin(xi[day]))/(eps * (1 + gamma**2)) \
          + np.exp(-gamma * xi[day]) / \
@@ -290,7 +290,7 @@ def P_phi(P, alpha, res=12):
         P (array): thermal phase function as a function of xi
         phi (float): local longitude transformed to the observer's frame
         alpha (float): phase angle
-        res (int): long/lat resolution. splits planetary surface up into 
+        res (int): long/lat resolution. splits planetary surface up into
             [180 / res]-square degree grids. default = 15 degree^2 grids
 
     Returns:
@@ -318,7 +318,7 @@ def P_phi(P, alpha, res=12):
 
 def planck_function(T_eff):
     """Planck function convolved with the Kepler bandpass.
-    
+
     Note:
         Must have kepler_hires.dat in your working directory.
 
@@ -326,7 +326,7 @@ def planck_function(T_eff):
         T_eff (array with shape (lons, lats, 1)): effective temperature in Kelvins
 
     Returns:
-        float: radiance (W m-2 sr-1) as detected by Kepler, i.e. value of the 
+        float: radiance (W m-2 sr-1) as detected by Kepler, i.e. value of the
             Planck function integrated over the Kepler bandpass.
     """
     e = np.exp(hc / (wls * k_B * T_eff))
@@ -334,20 +334,16 @@ def planck_function(T_eff):
     integrand = B_const / (e - 1) * tess_response
     Bk = np.trapz(integrand, wls)
 
-    return Bk
+    return Bk.to(u.J / u.s / u.m ** 2)
 
-def find_nearest_planck(T_eff):
-    """ Finds the nearest value to 'value' in the array."""
-    idx = np.abs(T_eff_lib-T_eff).argmin(axis=2)
-    return int_planck[idx]
 
 def T_eff(f, P, alpha, Ts, Rs, semi_a, Ab, res=12):
-    """ Effective temperature of the planet as a function of 
-    alpha, planetary longitude, and planetary latitude. 
+    """ Effective temperature of the planet as a function of
+    alpha, planetary longitude, and planetary latitude.
     i.e., the temperature distribution across the planet's surface.
 
     Args:
-        res (int): long/lat resolution. splits planetary surface up into 
+        res (int): long/lat resolution. splits planetary surface up into
             [180 / res]-square degree grids. default = 15 degree^2 grids
 
     Returns:
@@ -358,7 +354,7 @@ def T_eff(f, P, alpha, Ts, Rs, semi_a, Ab, res=12):
     theta = np.linspace(np.pi / 2, -np.pi / 2, res + 1)[:, None]
     T0_theta = Ts * np.sqrt(Rs / semi_a) * (1 - Ab)**(1/4) * np.cos(theta)**(1/4)
 
-    return f * T0_theta * P_eps_alpha
+    return f * T0_theta.to(u.K) * P_eps_alpha
 
 def thermal_integrand(theta, phi, alpha, P, Ab, eps, f, Ts, Rs, semi_a, res=12):
     """Integrand of the thermal phase dependency of the planet's
@@ -376,7 +372,7 @@ def thermal_integrand(theta, phi, alpha, P, Ab, eps, f, Ts, Rs, semi_a, res=12):
         Ts (float): effective temperature of the star
         Rs (float): radius of the star
         semi_a (float): semi major axis of the planet
-        res (int): long/lat resolution. splits planetary surface up into 
+        res (int): long/lat resolution. splits planetary surface up into
             [180 / res]-square degree grids. default = 15 degree^2 grids
 
     Returns:
@@ -385,7 +381,7 @@ def thermal_integrand(theta, phi, alpha, P, Ab, eps, f, Ts, Rs, semi_a, res=12):
     #temperature distribution function
     T = T_eff(f, P, alpha, Ts, Rs, semi_a, Ab, res)
     # planck function for the planet integrated over Kepler bandpass
-    Bk = interpolate_planck(T.to(u.K).value)
+    Bk = interpolate_planck(T.to(u.K).value) * u.J / u.s / u.m ** 2
 
     return Bk * np.cos(theta)**2 * np.cos(phi)
 
@@ -402,7 +398,7 @@ def thermal(phase, Ab, eps, f, Rp, Rs, Ts, semi_a, res=12):
         Ts (float): effective temperature of the star [K]
         semi_a (float): semi major axis of the planet [m]
         res (int): long/lat resolution. Must satisfy 180 mod res = 0.
-            Splits planetary surface up into 
+            Splits planetary surface up into
             [180 / res]-square degree grids. default = 15 degree^2 grids
 
     Returns:
@@ -414,24 +410,24 @@ def thermal(phase, Ab, eps, f, Rp, Rs, Ts, semi_a, res=12):
     theta = np.linspace(np.pi / 2, -np.pi / 2, res + 1)[:, None]
     phi = np.linspace(-np.pi / 2, np.pi / 2, res + 1)
 
-    F_T_norm = []
+    F_T_norm = np.array([])
     for alpha in phase:
 
         Bk = thermal_integrand(theta, phi, alpha, P, Ab, abs(eps), f, Ts, Rs, semi_a, res)
-        
+
         Bs = planck_function(Ts) # integrated planck function of the host
 
         inner = np.trapz(Bk, phi) # integrate over longitude
         F_T = np.trapz(inner, theta.ravel()[::-1]) # integrate over latitude
-
-        F_T_norm += [F_T / (Bs * np.pi * Rs**2)]
+        f_t_norm = F_T / (Bs * np.pi * Rs**2)
+        F_T_norm = np.append(F_T_norm, np.array(f_t_norm.value))
 
     if eps < 0.0:
         return Rp**2 * np.array(F_T_norm[::-1])
-    print(F_T_norm)
-    return Rp**2 * np.array(F_T_norm)
 
-### BRING IT AROUND TOWN ### 
+    return Rp ** 2 * F_T_norm * f_t_norm.unit
+
+### BRING IT AROUND TOWN ###
 
 def therm_sref(n_samples, kepid, phase, Ab, eps, f, Rp, Rs, Ts, semi_a):
     therm = thermal(phase, Ab, eps, f, R_earth * Rp, R_sun * Rs, Ts, au * semi_a) * 1e6
@@ -442,8 +438,8 @@ def run(phase, Ab, eps, f, kappa, xi1, xi2, Rp, Rs, Ts, semi_a, \
     res=12, therm=True, s_reflection=True, a_reflection=True):
     """ Returns the total phase curve model and any components of the model.
     i.e., if therm = True, s_reflection = True, a_reflection = False, this function
-    will return the thermal component, symmetric component, and the total thermal + 
-    symmetric model. 
+    will return the thermal component, symmetric component, and the total thermal +
+    symmetric model.
 
     Notes:
         Returns the full model on default.
@@ -453,32 +449,29 @@ def run(phase, Ab, eps, f, kappa, xi1, xi2, Rp, Rs, Ts, semi_a, \
         phase (array): phase angles in radians
         eps (float): thermal redistribution factor
         f (float): greenhouse factor
-        kappa (float): reflectivity boosting factor. < 1 for dark patch, 
+        kappa (float): reflectivity boosting factor. < 1 for dark patch,
             >1 for bright patch. Set to None if a_reflection==False
-        xi1 (float): local longitude in radians designating 
-            the start of the region with low reflectivity. Set to None 
+        xi1 (float): local longitude in radians designating
+            the start of the region with low reflectivity. Set to None
             if a_reflection==False
-        xi2 (float): local longitude in radians designating 
-            the end of the region with low reflectivity. Set to None 
+        xi2 (float): local longitude in radians designating
+            the end of the region with low reflectivity. Set to None
             if a_reflection==False
         Rp (float): radius of the planet [Earth radii]
         Rs (float): radius of the star [Solar radii]
         Ts (float): effective temperature of the star [K]
         semi_a (float): semi major axis of the planet [AU]
-        res (int): long/lat resolution. splits planetary surface up into 
+        res (int): long/lat resolution. splits planetary surface up into
             [180 / res]-square degree grids. default = 15 degree^2 grids
         therm (bool): Returns the thermal component of the model if True
-        s_reflection (bool): Returns the symmetric reflection component of 
+        s_reflection (bool): Returns the symmetric reflection component of
             the model if True
-        a_reflection (bool): Returns the asymmetric reflection component of 
+        a_reflection (bool): Returns the asymmetric reflection component of
             the model if True
 
     Returns:
         array or tuple of arrays
     """
-    Rp = R_earth * Rp
-    Rs = R_sun * Rs
-    semi_a = au * semi_a
 
     if [therm, s_reflection, a_reflection] == [True, False, False]:
         therm = thermal(phase, Ab, eps, f, Rp, Rs, Ts, semi_a, res=res) * 1e6
