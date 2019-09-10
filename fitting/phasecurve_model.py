@@ -62,7 +62,7 @@ def sym_reflection(Rp, semi_a, phase, Ab):
         array, normalized by host flux
     """
     Ag = 2/3 * Ab  # in the lambertian sphere approximation
-    refl_component = (Rp / semi_a) ** 2 * Ag
+    refl_component = ((Rp / semi_a) ** 2 * Ag).to(u.Unit(''))
     phase = abs(phase)
     phase_component = (np.sin(phase) + (np.pi - phase) * np.cos(phase)) / np.pi
     return refl_component * phase_component
