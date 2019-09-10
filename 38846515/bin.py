@@ -20,14 +20,11 @@ def bin(x, binsize, flux, flux_err):
         if len(errors_to_bin) > 0:
             binned_flux = np.append(binned_flux,
                                     np.nanmean(flux[bin]))
-                                    # [np.average(flux[bin],
-                                    #             weights=1 / errors_to_bin ** 2)])
+
             binned_error = np.append(binned_error,
-                                     np.nanmean(errors_to_bin) / np.sqrt(len(errors_to_bin)))
-                                     # [np.average(errors_to_bin) /
-                                     #             np.sqrt(len(errors_to_bin))])
+                                     np.nanstd(flux[bin]) / np.sqrt(len(flux[bin])))
         else:
             binned_flux = np.append(binned_flux, np.array([np.nan]))
             binned_error = np.append(binned_error, np.array([np.nan]))
-
+    print(binned_error)
     return binned_x, binned_flux, binned_error

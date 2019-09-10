@@ -2,11 +2,11 @@
 
 tic=38846515
 
-period=2.84938
+period=2.8493814
 
-duration=3.776111
+duration=3.80088
 
-ephemeris=1326.7450769999996
+ephemeris=1426.4732900001109
 
 python make_data-dat.py $tic $period $duration $ephemeris
 python edit_beersh.py $tic $period

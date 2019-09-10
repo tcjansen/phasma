@@ -19,7 +19,7 @@ import mcmc
 import models
 
 
-def _beer_fit(tic, period, duration, ephemeris):
+def beer(tic, period, duration, ephemeris):
     with open('BEER/run.sh', 'w') as run:
 
         run.write('#!/bin/bash' + '\n\n')
@@ -48,65 +48,74 @@ def _beer_fit(tic, period, duration, ephemeris):
 class Fit(object):
 
     def __init__(self, phase, flux, flux_err, model, nwalkers=100,
-                 nsteps=1000, nbins=21):
+                 nsteps=1000):
         self.phase = phase
         self.flux = flux
         self.flux_err = flux_err
         self.model = model
         self.nwalkers = nwalkers
         self.nsteps = nsteps
-        self.nbins = nbins
 
     def _get_params(self, model=None):
         if model=="flat":
-            return ['offset - 1 [ppm]'], 1
+            return ['offset'], 1
         elif model=="therm":
-            return ['offset - 1 [ppm]', r'log10$A_{therm+ref}$'], 2
+            return ['offset', r'$A_{therm+ref}$'], 2
         elif model=="ellip":
-            return ['offset - 1 [ppm]', r'log10$A_{ellip}$'], 2
+            return ['offset', r'$A_{ellip}$'], 2
         elif model=="beam":
-            return ['offset - 1 [ppm]', r'log10$A_{beam}$'], 2
+            return ['offset', r'$A_{beam}$'], 2
         elif model=="shifted_therm":
-            return ['offset - 1 [ppm]', r'log10$A_{therm+ref}$', r'$\phi$'], 3
+            return ['offset', r'$A_{therm+ref}$', r'$\phi$'], 3
         elif model=="therm_ellip":
-            return ['offset - 1 [ppm]', r'log10$A_{therm+ref}$', r'log10$A_{ellip}$'], 3
+            return ['offset', r'$A_{therm+ref}$', r'$A_{ellip}$'], 3
         elif model=="ellip_beam":
-            return ['offset - 1 [ppm]', r'log10$A_{ellip}$', r'log10$A_{beam}$'], 3
+            return ['offset', r'$A_{ellip}$', r'$A_{beam}$'], 3
         elif model=="therm_beam":
-            return ['offset - 1 [ppm]', r'log10$A_{therm+ref}$', r'log10$A_{beam}$'], 3
+            return ['offset', r'$A_{therm+ref}$', r'$A_{beam}$'], 3
         else:
-            raise ValueError("The correct model type must be specified when calling for the model parameters")
+            raise ValueError("The correct model type must be specified when "
+                             "calling for the model parameters")
 
     def _get_pos(self, theta, model=None):
-        if model=="flat":
-            return [np.array([theta[0]+1e-2*np.random.randn()]) for i in range(self.nwalkers)]
-        elif model=="therm":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn()])
-                   for i in range(self.nwalkers)]
-        elif model=="ellip":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn()])
-                   for i in range(self.nwalkers)]
-        elif model=="beam":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn()])
-                   for i in range(self.nwalkers)]
-        elif model=="shifted_therm":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn(),
-                    theta[2]+1e-2*np.random.randn()])
+        if model == "flat":
+            return [np.array([theta[0] + np.random.randn()])
                     for i in range(self.nwalkers)]
-        elif model=="therm_ellip":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn(),
-                    theta[2] - 0.1 * np.random.randn()])
+        elif model == "therm":
+            return [np.array([theta[0] + np.random.randn(),
+                              theta[1] + 10 * np.random.randn()])
                     for i in range(self.nwalkers)]
-        elif model=="ellip_beam":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn(),
-                    theta[2] - 0.1 * np.random.randn()])
+        elif model == "ellip":
+            return [np.array([theta[0] + np.random.randn(),
+                              theta[1] + 10 * np.random.randn()])
                     for i in range(self.nwalkers)]
-        elif model=="therm_beam":
-            return [np.array([theta[0]+1e-2*np.random.randn(), theta[1] - 0.1 * np.random.randn(),
-                    theta[2] - 0.1 * np.random.randn()])
+        elif model == "beam":
+            return [np.array([theta[0] + np.random.randn(),
+                              theta[1] + 10 * np.random.randn()])
+                    for i in range(self.nwalkers)]
+        elif model == "shifted_therm":
+            return [np.array([theta[0] + np.random.randn(),
+                              theta[1] + 10 * np.random.randn(),
+                              theta[2] + 10 * np.random.randn()])
+                    for i in range(self.nwalkers)]
+        elif model == "therm_ellip":
+            return [np.array([theta[0] + np.random.randn(),
+                              theta[1] + 10 * np.random.randn(),
+                              theta[2] + 10 * np.random.randn()])
+                    for i in range(self.nwalkers)]
+        elif model == "ellip_beam":
+            return [np.array([theta[0] + np.random.randn(),
+                              theta[1] + 10 * np.random.randn(),
+                              theta[2] + 10 * np.random.randn()])
+                    for i in range(self.nwalkers)]
+        elif model == "therm_beam":
+            return [np.array([theta[0] + np.random.randn(),
+                              theta[1] + 10 * np.random.randn(),
+                              theta[2] + 10 * np.random.randn()])
                     for i in range(self.nwalkers)]
         else:
-            raise ValueError("The correct model type must be specified when calling for the walker starting positions")
+            raise ValueError("The correct model type must be specified when "
+                             "calling for the walker starting positions")
 
     def results(self, tic, theta, priors,
                 convergenceplot_name=None, cornerplot_name=None):

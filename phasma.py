@@ -36,7 +36,7 @@ class TESSPhasecurve(object):
                  remove_curl=False, remove_fits=False, strict_clean=False,
                  plot_clean_lc=False, plot_raw_lc=False, transit_at_0=False,
                  cleaning_window=False, save=False, filename=False,
-                 mask_secondary=False):
+                 mask_primary=True, mask_secondary=False):
 
         # make a directory for this target if it doesn't aready exist
         self.tic_dir = './' + str(tic)
@@ -57,6 +57,7 @@ class TESSPhasecurve(object):
         self.plot_clean_lc = plot_clean_lc
         self.plot_raw_lc = plot_raw_lc
         self.cleaning_window = cleaning_window
+        self.mask_primary = mask_primary
         self.mask_secondary = mask_secondary
 
         (self._raw_time,
@@ -69,7 +70,7 @@ class TESSPhasecurve(object):
          self.flux_err) = self._wrap()
 
         if transit_at_0:
-            self.flux, self.flux_err = _redefine_phase(self.flux, self.flux_err)
+            self.phase, self.flux, self.flux_err = self._redefine_phase()
 
         if save:
             self.write(filename=filename)
@@ -337,13 +338,14 @@ class TESSPhasecurve(object):
             # define the phase corresponding to the cleaned fluxes
             phase = self._phase(clean_t)
 
-            # remove transit from light curve
             transit_phase = float(self.transit_duration *
-                                  self.transit_duration_buff /
-                                  self.period) / 2
-            in_transit = (phase <= -0.5 + transit_phase) + (phase >= 0.5 - transit_phase)
-            clean_flux[in_transit] = np.nan
-            clean_flux_err[in_transit] = np.nan
+                                      self.transit_duration_buff /
+                                      self.period) / 2
+            # remove transit from light curve if called for
+            if self.mask_primary:
+                in_transit = (phase <= -0.5 + transit_phase) + (phase >= 0.5 - transit_phase)
+                clean_flux[in_transit] = np.nan
+                clean_flux_err[in_transit] = np.nan
 
             # remove secondary, if called for
             if self.mask_secondary:
@@ -398,6 +400,19 @@ class TESSPhasecurve(object):
         trimmed_flux_err[outliers] = np.nan
 
         return trimmed_t, trimmed_flux, trimmed_flux_err
+
+    def _redefine_phase(self):
+        # # manipulate arrays such that transit occurs at phase = 0
+        first_half = self.phase < 0
+        last_half = self.phase >= 0
+
+        new_phase = np.append(self.phase[last_half] - 0.5,
+                              self.phase[first_half] + 0.5)
+        new_flux = np.append(self.flux[last_half], self.flux[first_half])
+        new_flux_err = np.append(self.flux_err[last_half],
+                                 self.flux_err[first_half])
+
+        return new_phase, new_flux, new_flux_err
 
 
 def _moving_median(x, y, y_err, window_size):
@@ -460,18 +475,3 @@ def _bin(x, binsize, flux, flux_err):
             binned_error = np.append(binned_error, np.array([np.nan]))
 
     return binned_x, binned_flux, binned_error
-
-
-def _redefine_phase(flux, flux_err):
-    # # manipulate arrays such that transit occurs at phase = 0
-    midpoint = int(len(flux) / 2)
-
-    first_half = flux[:midpoint]
-    last_half = flux[midpoint:]
-    new_flux = np.append(last_half, first_half)
-
-    first_half = flux_err[:midpoint]
-    last_half = flux_err[midpoint:]
-    new_flux_err = np.append(last_half, first_half)
-
-    return new_flux, new_flux_err
