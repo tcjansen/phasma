@@ -36,21 +36,21 @@ class Phasecurve(object):
                  mask_primary=True, mask_secondary=False, binsize=0.002,
                  return_all=False):
 
-    self.period = period
-    self.transit_duration = transit_duration
-    self.transit_epoch = transit_epoch
-    self.transit_duration_buff = transit_duration_buff
-    self.remove_fits = remove_fits
-    self.plot_clean_lc = plot_clean_lc
-    self.plot_raw_lc = plot_raw_lc
-    self.transit_at_0 = transit_at_0
-    self.cleaning_window = cleaning_window
-    self.mask_primary = mask_primary
-    self.mask_secondary = mask_secondary
-    self.binsize = binsize
-    self.return_all = return_all
+        self.period = period
+        self.transit_duration = transit_duration
+        self.transit_epoch = transit_epoch
+        self.transit_duration_buff = transit_duration_buff
+        self.remove_fits = remove_fits
+        self.plot_clean_lc = plot_clean_lc
+        self.plot_raw_lc = plot_raw_lc
+        self.transit_at_0 = transit_at_0
+        self.cleaning_window = cleaning_window
+        self.mask_primary = mask_primary
+        self.mask_secondary = mask_secondary
+        self.binsize = binsize
+        self.return_all = return_all
 
-    self.cadence = stats.mode(np.diff(self._raw_time)).mode
+        self.cadence = stats.mode(np.diff(self._raw_time)).mode
 
     def write(self, directory=None, filename=False):
         """ Writes the phase curve to a csv file. """
@@ -58,8 +58,14 @@ class Phasecurve(object):
             filename = directory + '/phasecurve.csv'
 
         with open(filename, 'w') as w:
-            for i,j,k,m in zip(self.time, self.phase, self.flux, self.flux_err):
-                w.write(str(i) + ',' + str(j) + ',' + str(k) + ',' + str(m) + '\n')
+            for i, j, k, m in zip(self.time,
+                                  self.phase,
+                                  self.flux,
+                                  self.flux_err):
+                w.write(str(i) + ',' +
+                        str(j) + ',' +
+                        str(k) + ',' +
+                        str(m) + '\n')
         return
 
     def plot(self, show=True, save=False, file_format='png', bin=False,
@@ -71,7 +77,8 @@ class Phasecurve(object):
         flux_err = self.flux_err
 
         if bin:
-            phase, time, flux, flux_err = _bin(binsize, phase, time, flux, flux_err)
+            phase, time, flux, flux_err = _bin(binsize, phase, time, flux,
+                                               flux_err)
 
         plt.figure(figsize=(16, 5))
         plt.errorbar(phase, flux, yerr=flux_err,
@@ -134,7 +141,8 @@ class Phasecurve(object):
                     split_flux_err += [list(flux_err[:true_gap_starts[0] + 1])]
 
                 else:
-                    print("Baseline is shorter than twice the length of the period.")
+                    print("Baseline is shorter than "
+                          "twice the length of the period.")
 
                 if not len(t[true_gap_ends[0]:]) < 2 * period / cadence:
                     split_time += [list(t[true_gap_ends[0]:])]
@@ -142,7 +150,8 @@ class Phasecurve(object):
                     split_flux_err += [list(flux_err[true_gap_ends[0]:])]
 
                 else:
-                    print("Baseline is shorter than twice the length of the period.")
+                    print("Baseline is shorter than "
+                          "twice the length of the period.")
 
             elif true_gap_starts[0] != 0:
 
@@ -155,34 +164,46 @@ class Phasecurve(object):
                     split_flux += [list(flux[:true_gap_starts[0] + 1])]
                     split_flux_err += list([flux_err[:true_gap_starts[0] + 1]])
                 else:
-                    print("Baseline is shorter than twice the length of the period.")
+                    print("Baseline is shorter than "
+                          "twice the length of the period.")
 
                 for i in range(len(true_gap_starts)-1):
-                    if not len(t[true_gap_ends[i]:true_gap_starts[i+1]]) < 2 * period / cadence:
-                        split_time += [list(t[true_gap_ends[i]:true_gap_starts[i+1]])]
-                        split_flux += [list(flux[true_gap_ends[i]:true_gap_starts[i+1]])]
-                        split_flux_err += [list(flux_err[true_gap_ends[i]:true_gap_starts[i+1]])]
+                    if not len(t[true_gap_ends[i]:true_gap_starts[i+1]]
+                               ) < 2 * period / cadence:
+                        split_time += [list(t[
+                            true_gap_ends[i]:true_gap_starts[i+1]])]
+                        split_flux += [list(flux[
+                            true_gap_ends[i]:true_gap_starts[i+1]])]
+                        split_flux_err += [list(flux_err[
+                            true_gap_ends[i]:true_gap_starts[i+1]])]
                     else:
-                        print("Baseline is shorter than twice the length of the period.")
+                        print("Baseline is shorter than "
+                              "twice the length of the period.")
 
                 if not len(t[true_gap_ends[-1]:]) < 2 * period / cadence:
                     split_time += [list(t[true_gap_ends[-1]:])]
                     split_flux += [list(flux[true_gap_ends[-1]:])]
                     split_flux_err += [list(flux_err[true_gap_ends[-1]:])]
                 else:
-                    print("Baseline is shorter than twice the length of the period.")
+                    print("Baseline is shorter than "
+                          "twice the length of the period.")
 
             else:
                 split_time = []
                 split_flux = []
                 split_flux_err = []
                 for i in range(len(true_gap_starts) - 1):
-                    if not len(t[true_gap_ends[i]:true_gap_starts[i+1]]) < 2 * period / cadence:
-                        split_time += [list(t[true_gap_ends[i]:true_gap_starts[i+1]])]
-                        split_flux += [list(flux[true_gap_ends[i]:true_gap_starts[i+1]])]
-                        split_flux += [list(flux_err[true_gap_ends[i]:true_gap_starts[i+1]])]
+                    if not len(t[true_gap_ends[i]:true_gap_starts[i+1]]
+                               ) < 2 * period / cadence:
+                        split_time += [list(t[
+                            true_gap_ends[i]:true_gap_starts[i+1]])]
+                        split_flux += [list(flux[
+                            true_gap_ends[i]:true_gap_starts[i+1]])]
+                        split_flux += [list(flux_err[
+                            true_gap_ends[i]:true_gap_starts[i+1]])]
                     else:
-                        print("Baseline is shorter than twice the length of the period.")
+                        print("Baseline is shorter than "
+                              "twice the length of the period.")
 
         return split_time, split_flux, split_flux_err
 
@@ -201,7 +222,8 @@ class Phasecurve(object):
         (sorted_phase,
          sorted_t,
          sorted_flux,
-         sorted_flux_err) = np.array(sorted(transverse_data, key=itemgetter(0))).T
+         sorted_flux_err) = np.array(sorted(transverse_data,
+                                            key=itemgetter(0))).T
 
         return sorted_phase, sorted_t, sorted_flux, sorted_flux_err
 
@@ -216,8 +238,8 @@ class Phasecurve(object):
 
         if not self.cleaning_window:
             self.cleaning_window = (np.maximum(self.transit_duration_buff *
-                                              self.transit_duration.value /
-                                              100, 10 * self.cadence) /
+                                               self.transit_duration.value /
+                                               100, 10 * self.cadence) /
                                     self.period.value)
 
         (trimmed_t,
@@ -255,7 +277,20 @@ class Tess(Phasecurve):
         This is recommended to save disk space if you don't plan on
         running phasma multiple times for the same object. Default is False.
     """
-    def __init__(self, tic, sectors, remove_curl=False):
+    def __init__(self, tic, period, transit_duration, transit_epoch, sectors,
+                 remove_curl=False, transit_duration_buff=1.0,
+                 remove_fits=False, plot_clean_lc=False, plot_raw_lc=False,
+                 transit_at_0=False, cleaning_window=False, save=False,
+                 filename=False, mask_primary=True, mask_secondary=False,
+                 binsize=0.002, return_all=False):
+        super().__init__(period, transit_duration, transit_epoch,
+                         transit_duration_buff=transit_duration_buff,
+                         remove_fits=remove_fits, plot_clean_lc=plot_clean_lc,
+                         plot_raw_lc=plot_raw_lc, transit_at_0=transit_at_0,
+                         cleaning_window=cleaning_window, save=save,
+                         filename=filename, mask_primary=mask_primary,
+                         mask_secondary=mask_secondary, binsize=binsize,
+                         return_all=return_all)
 
         # make a directory for this target if it doesn't aready exist
         self.tic_dir = './' + str(tic)
@@ -293,27 +328,31 @@ class Tess(Phasecurve):
                 if not os.path.isfile(curl_sh_path):
                     print("Downloading the light curve curl file for sector " +
                           str(sector) + "...")
-                    urllib.request.urlretrieve('https://archive.stsci.edu/missions/' +
-                                'tess/download_scripts/sector/tesscurl_' +
-                                'sector_' + str(sector) + '_lc.sh', curl_sh_path)
+                    urllib.request.urlretrieve('https://archive.stsci.edu/' +
+                                               'missions/tess/download_' +
+                                               'scripts/sector/tesscurl_' +
+                                               'sector_' + str(sector) +
+                                               '_lc.sh', curl_sh_path)
 
                 with open(curl_sh_path) as curl_sh:
                     array_of_curls = np.array(curl_sh.read().splitlines())
 
                     # search for this toi's curl
                     toi_curls = [curl for curl in array_of_curls
-                                if self.tic in curl]
+                                 if self.tic in curl]
 
                     # download the fits files if not in directory
-                    mast_url = 'https://mast.stsci.edu/api/v0.1/Download/file/?uri=mast:TESS/product/'
+                    mast_url = ('https://mast.stsci.edu/api/v0.1/Download/' +
+                                'file/?uri=mast:TESS/product/')
                     for curl in toi_curls:
                         fits_file = curl[16:71]
                         if not os.path.isfile(self.tic_dir + '/' + fits_file):
                             print('Downloading the fits files for TIC ' +
-                                   self.tic + " in sector " + str(sector) +
-                                   "... ")
+                                  self.tic + " in sector " + str(sector) +
+                                  "... ")
                             urllib.request.urlretrieve(mast_url + fits_file,
-                                            self.tic_dir + '/' + fits_file)
+                                                       self.tic_dir + '/' +
+                                                       fits_file)
 
                 # delete the curl files to save space
                 if self.remove_curl:
@@ -321,7 +360,8 @@ class Tess(Phasecurve):
 
                 # unpack the fits file
                 raw_time, raw_flux, raw_flux_err = _unpack_fits(self.tic_dir +
-                                                                '/' + fits_file)
+                                                                '/' +
+                                                                fits_file)
                 time = np.append(time, raw_time)
                 flux = np.append(flux, raw_flux)
                 flux_err = np.append(flux_err, raw_flux_err)
@@ -369,14 +409,15 @@ class Tess(Phasecurve):
             (clean_t,
              clean_flux,
              clean_flux_err) = self._clean(np.array(split_time[continuous]),
-                                      np.array(split_flux[continuous]),
-                                      np.array(split_flux_err[continuous]))
+                                           np.array(split_flux[continuous]),
+                                           np.array(split_flux_err[continuous])
+                                           )
 
             # second pass at outlier removal
             (clean_t,
              clean_flux,
              clean_flux_err) = self._clean(clean_t, clean_flux,
-                                      clean_flux_err)
+                                           clean_flux_err)
 
             if self.plot_clean_lc:
                 plt.scatter(clean_t, clean_flux, color='red')
@@ -385,12 +426,13 @@ class Tess(Phasecurve):
             phase = self._phase(clean_t)
 
             transit_phase = float(self.transit_duration *
-                                      self.transit_duration_buff /
-                                      self.period) / 2
+                                  self.transit_duration_buff /
+                                  self.period) / 2
 
             # remove transit from light curve if called for
             if self.mask_primary:
-                in_transit = (phase <= -0.5 + transit_phase) + (phase >= 0.5 - transit_phase)
+                in_transit = ((phase <= -0.5 + transit_phase) +
+                              (phase >= 0.5 - transit_phase))
                 clean_flux[in_transit] = np.nan
                 clean_flux_err[in_transit] = np.nan
 
@@ -418,9 +460,9 @@ class Tess(Phasecurve):
             # store binned data by sector
             phasma_p = self._phase(phasma_t)
             p, t, f, ferr = self._fold(phasma_p,
-                                        phasma_t,
-                                        phasma_flux,
-                                        phasma_flux_err)
+                                       phasma_t,
+                                       phasma_flux,
+                                       phasma_flux_err)
 
             if self.transit_at_0:
                 p, f, ferr = _redefine_phase(p, f, ferr)
@@ -434,7 +476,7 @@ class Tess(Phasecurve):
             wji.append(list(1 / bin_flux_err ** 2))
 
         if self.plot_clean_lc:
-                plt.show()
+            plt.show()
 
         if self.return_all:
             # fold the combined data and return
@@ -450,10 +492,24 @@ class Tess(Phasecurve):
 
 
 class Kepler(Phasecurve):
-    def __init__(self, kic):
+    @u.quantity_input(period=u.day, transit_duration=u.hr)
+    def __init__(self, kic, period, transit_duration, transit_epoch,
+                 transit_duration_buff=1.0, remove_fits=False,
+                 plot_clean_lc=False, plot_raw_lc=False, transit_at_0=False,
+                 cleaning_window=False, save=False, filename=False,
+                 mask_primary=True, mask_secondary=False, binsize=0.002,
+                 return_all=False):
         """
         Returns the phase curve of an object of interest observed by TESS.
         """
+        super().__init__(period, transit_duration, transit_epoch,
+                         transit_duration_buff=transit_duration_buff,
+                         remove_fits=remove_fits, plot_clean_lc=plot_clean_lc,
+                         plot_raw_lc=plot_raw_lc, transit_at_0=transit_at_0,
+                         cleaning_window=cleaning_window, save=save,
+                         filename=filename, mask_primary=mask_primary,
+                         mask_secondary=mask_secondary, binsize=binsize,
+                         return_all=return_all)
 
         # make a directory for this target if it doesn't aready exist
         self.kic_dir = './' + str(kic)
@@ -541,14 +597,15 @@ class Kepler(Phasecurve):
             (clean_t,
              clean_flux,
              clean_flux_err) = self._clean(np.array(split_time[continuous]),
-                                      np.array(split_flux[continuous]),
-                                      np.array(split_flux_err[continuous]))
+                                           np.array(split_flux[continuous]),
+                                           np.array(split_flux_err[continuous])
+                                           )
 
             # second pass at outlier removal
             (clean_t,
              clean_flux,
              clean_flux_err) = self._clean(clean_t, clean_flux,
-                                      clean_flux_err)
+                                        clean_flux_err)
 
             if self.plot_clean_lc:
                 plt.scatter(clean_t, clean_flux, color='red')
@@ -639,6 +696,7 @@ def _unpack_fits(fits_path):
 
     return raw_time, norm_flux, norm_flux_err
 
+
 def _moving_median(x, y, y_err, window_size):
 
     moving_med_x = np.array([])  # x in middle of bins
@@ -689,8 +747,8 @@ def _bin(binsize, phase, time, flux, flux_err):
     bin_end = phase[-1]
     bin_edges = np.arange(bin_start, bin_end, binsize)
     binned_phase = np.arange(bin_start + binsize / 2,
-                         bin_end + binsize / 2,
-                         binsize)
+                             bin_end + binsize / 2,
+                             binsize)
     bin_indices = np.digitize(phase, bin_edges) - 1
 
     binned_time = np.array([])
@@ -715,7 +773,7 @@ def _bin(binsize, phase, time, flux, flux_err):
             weighted_mean = np.nansum(flux_to_bin * weights) / V1
 
             sample_variance = (np.nansum(weights *
-                                   (flux_to_bin - weighted_mean) ** 2) /
+                                         (flux_to_bin - weighted_mean) ** 2) /
                                (V1 - V2 / V1))
             stdev = np.sqrt(sample_variance) / np.sqrt(len(flux_to_bin) - 1)
 
@@ -744,7 +802,7 @@ def _offset_correction(phases, fluxes, weights):
         V2 = np.nansum(w ** 2, axis=0)
         mustar = np.sum(y * w, axis=0) / V1
         sample_variance = (np.sum(w * (y - mustar) ** 2, axis=0) /
-                            (V1 - V2 / V1))
+                           (V1 - V2 / V1))
         stdev = np.sqrt(sample_variance) / np.sqrt(len(y) - 1)
 
         return mustar, stdev
