@@ -1,3 +1,6 @@
+from __future__ import (absolute_import, division, print_function,
+                        unicode_literals)
+
 import numpy as np
 import os
 import matplotlib.pyplot as plt
@@ -15,6 +18,9 @@ from scipy.interpolate import interp1d
 import scipy.stats as stats
 from scipy.special import erfcinv
 import scipy.optimize as optimize
+
+
+__all__ = ["Tess", "Kepler"]
 
 
 class Phasecurve(object):
@@ -49,8 +55,6 @@ class Phasecurve(object):
         self.mask_secondary = mask_secondary
         self.binsize = binsize
         self.return_all = return_all
-
-        self.cadence = stats.mode(np.diff(self._raw_time)).mode
 
     def write(self, directory=None, filename=False):
         """ Writes the phase curve to a csv file. """
@@ -305,6 +309,8 @@ class Tess(Phasecurve):
          self._raw_flux,
          self._raw_flux_err) = self._get_raw_lightcurve()
 
+        self.cadence = stats.mode(np.diff(self._raw_time)).mode
+
         (self.phase,
          self.time,
          self.flux,
@@ -522,6 +528,8 @@ class Kepler(Phasecurve):
          self._raw_flux,
          self._raw_flux_err) = self._get_raw_lightcurve()
 
+        self.cadence = stats.mode(np.diff(self._raw_time)).mode
+
         (self.phase,
          self.time,
          self.flux,
@@ -542,10 +550,15 @@ class Kepler(Phasecurve):
         kic_url = mast_url + kic_short + '/' + self.kic + '/'
         url_content = requests.get(kic_url).text
         soup = BeautifulSoup(url_content, 'html.parser')
+
+        # check for 404
+        if '404' in str(soup.find_all('title')):
+            print('The requested URL' /pub/kepler/lightcurves//10748/10748390/ was not found on this server)
         fits_files = [node.get('href')
                       for node in soup.find_all('a')
                       if node.get('href').endswith('fits')]
-
+        # print(kic_url, url_content, soup)
+        # exit()
         for fits_file in fits_files:
             if not os.path.isfile(self.kic_dir + '/' + fits_file):
                 print("Downloading the fits files " + fits_file +
