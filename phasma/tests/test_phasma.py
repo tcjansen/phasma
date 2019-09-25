@@ -10,13 +10,18 @@ from phasma import Kepler
 
 class TestKepler(object):
     def __init__(self):
-        kic = 10748390
-        period = 4.887802443 * u.day
-        transit_duration = 2.36386 * u.hr
-        transit_epoch = 2454957.8131411
+        kic = 10666592
+        period = 2.20473540 * u.day
+        transit_duration = 4.0398 * u.hr
+        transit_epoch = 54.358470 + 2454900 - 2454833
 
         self.hatp11b = Kepler(kic, period, transit_duration,
-                              transit_epoch)
+                              transit_epoch, transit_at_0=True,
+                              transit_duration_buff=1.1,
+                              mask_primary=False)
+        plt.errorbar(self.hatp11b.phase, self.hatp11b.flux,
+                     self.hatp11b.flux_err, fmt='o')
+        plt.show()
 
     def test_get_raw_lightcurve(self):
         import matplotlib.pyplot as plt

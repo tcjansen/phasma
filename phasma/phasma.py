@@ -39,11 +39,11 @@ class Phasecurve(object):
                  transit_duration_buff=1.0, remove_fits=False,
                  plot_clean_lc=False, plot_raw_lc=False, transit_at_0=False,
                  cleaning_window=False, save=False, filename=False,
-                 mask_primary=True, mask_secondary=False, binsize=0.002,
+                 mask_primary=True, mask_secondary=False, nphasebins=500,
                  return_all=False):
 
         self.period = period
-        self.transit_duration = transit_duration
+        self.transit_duration = transit_duration.to(u.day)
         self.transit_epoch = transit_epoch
         self.transit_duration_buff = transit_duration_buff
         self.remove_fits = remove_fits
@@ -53,7 +53,7 @@ class Phasecurve(object):
         self.cleaning_window = cleaning_window
         self.mask_primary = mask_primary
         self.mask_secondary = mask_secondary
-        self.binsize = binsize
+        self.nphasebins = nphasebins
         self.return_all = return_all
 
     def write(self, directory=None, filename=False):
@@ -73,7 +73,7 @@ class Phasecurve(object):
         return
 
     def plot(self, show=True, save=False, file_format='png', bin=False,
-             binsize=0.01, alpha=0.5):
+             alpha=0.5):
         """ Plots the phase curve. """
         time = self.time
         phase = self.phase
@@ -81,8 +81,8 @@ class Phasecurve(object):
         flux_err = self.flux_err
 
         if bin:
-            phase, time, flux, flux_err = _bin(binsize, phase, time, flux,
-                                               flux_err)
+            phase, time, flux, flux_err = _bin(self.nphasebins, phase, time,
+                                               flux, flux_err)
 
         plt.figure(figsize=(16, 5))
         plt.errorbar(phase, flux, yerr=flux_err,
@@ -138,6 +138,8 @@ class Phasecurve(object):
             split_flux = []
             split_flux_err = []
 
+            baseline_too_short = 0
+
             if len(true_gap_starts) == 1:
                 if not len(t[:true_gap_starts[0] + 1]) < 2 * period / cadence:
                     split_time += [list(t[:true_gap_starts[0] + 1])]
@@ -145,8 +147,7 @@ class Phasecurve(object):
                     split_flux_err += [list(flux_err[:true_gap_starts[0] + 1])]
 
                 else:
-                    print("Baseline is shorter than "
-                          "twice the length of the period.")
+                    baseline_too_short += 1
 
                 if not len(t[true_gap_ends[0]:]) < 2 * period / cadence:
                     split_time += [list(t[true_gap_ends[0]:])]
@@ -154,8 +155,7 @@ class Phasecurve(object):
                     split_flux_err += [list(flux_err[true_gap_ends[0]:])]
 
                 else:
-                    print("Baseline is shorter than "
-                          "twice the length of the period.")
+                    baseline_too_short += 1
 
             elif true_gap_starts[0] != 0:
 
@@ -168,8 +168,7 @@ class Phasecurve(object):
                     split_flux += [list(flux[:true_gap_starts[0] + 1])]
                     split_flux_err += list([flux_err[:true_gap_starts[0] + 1]])
                 else:
-                    print("Baseline is shorter than "
-                          "twice the length of the period.")
+                    baseline_too_short += 1
 
                 for i in range(len(true_gap_starts)-1):
                     if not len(t[true_gap_ends[i]:true_gap_starts[i+1]]
@@ -181,16 +180,14 @@ class Phasecurve(object):
                         split_flux_err += [list(flux_err[
                             true_gap_ends[i]:true_gap_starts[i+1]])]
                     else:
-                        print("Baseline is shorter than "
-                              "twice the length of the period.")
+                        baseline_too_short += 1
 
                 if not len(t[true_gap_ends[-1]:]) < 2 * period / cadence:
                     split_time += [list(t[true_gap_ends[-1]:])]
                     split_flux += [list(flux[true_gap_ends[-1]:])]
                     split_flux_err += [list(flux_err[true_gap_ends[-1]:])]
                 else:
-                    print("Baseline is shorter than "
-                          "twice the length of the period.")
+                    baseline_too_short += 1
 
             else:
                 split_time = []
@@ -206,8 +203,13 @@ class Phasecurve(object):
                         split_flux += [list(flux_err[
                             true_gap_ends[i]:true_gap_starts[i+1]])]
                     else:
-                        print("Baseline is shorter than "
-                              "twice the length of the period.")
+                        baseline_too_short += 1
+
+            if baseline_too_short > 0:
+                print("After splitting the data at significant gaps, "
+                      "the baseline was shorter than twice the length of "
+                      "the period on " + str(baseline_too_short) +
+                      " occasions.")
 
         return split_time, split_flux, split_flux_err
 
@@ -253,12 +255,12 @@ class Phasecurve(object):
                                            self.cleaning_window)
 
         # get the residuals
-        res = abs(trimmed_flux - moving_med_func(trimmed_t))
+        res = abs((trimmed_flux - moving_med_func(trimmed_t)) / trimmed_flux_err)
 
         # remove outliers
         outlier_cutoff = (1.4286 * stats.median_absolute_deviation(res) *
                           np.sqrt(2) * erfcinv(1 / len(res)))
-        outliers = res / trimmed_flux_err > outlier_cutoff
+        outliers = res > outlier_cutoff
 
         trimmed_flux[outliers] = np.nan
         trimmed_flux_err[outliers] = np.nan
@@ -286,14 +288,14 @@ class Tess(Phasecurve):
                  remove_fits=False, plot_clean_lc=False, plot_raw_lc=False,
                  transit_at_0=False, cleaning_window=False, save=False,
                  filename=False, mask_primary=True, mask_secondary=False,
-                 binsize=0.002, return_all=False):
+                 nphasebins=500, return_all=False):
         super().__init__(period, transit_duration, transit_epoch,
                          transit_duration_buff=transit_duration_buff,
                          remove_fits=remove_fits, plot_clean_lc=plot_clean_lc,
                          plot_raw_lc=plot_raw_lc, transit_at_0=transit_at_0,
                          cleaning_window=cleaning_window, save=save,
                          filename=filename, mask_primary=mask_primary,
-                         mask_secondary=mask_secondary, binsize=binsize,
+                         mask_secondary=mask_secondary, nphasebins=nphasebins,
                          return_all=return_all)
 
         # make a directory for this target if it doesn't aready exist
@@ -367,7 +369,8 @@ class Tess(Phasecurve):
                 # unpack the fits file
                 raw_time, raw_flux, raw_flux_err = _unpack_fits(self.tic_dir +
                                                                 '/' +
-                                                                fits_file)
+                                                                fits_file,
+                                                                'QUALITY')
                 time = np.append(time, raw_time)
                 flux = np.append(flux, raw_flux)
                 flux_err = np.append(flux_err, raw_flux_err)
@@ -473,8 +476,8 @@ class Tess(Phasecurve):
             if self.transit_at_0:
                 p, f, ferr = _redefine_phase(p, f, ferr)
 
-            bin_phase, bin_time, bin_flux, bin_flux_err = _bin(self.binsize, p,
-                                                               t, f, ferr)
+            bin_phase, bin_time, bin_flux, bin_flux_err = _bin(self.nphasebins,
+                                                               p, t, f, ferr)
 
             tji.append(list(bin_time))
             pji.append(list(bin_phase))
@@ -500,13 +503,22 @@ class Tess(Phasecurve):
 class Kepler(Phasecurve):
     @u.quantity_input(period=u.day, transit_duration=u.hr)
     def __init__(self, kic, period, transit_duration, transit_epoch,
-                 transit_duration_buff=1.0, remove_fits=False,
-                 plot_clean_lc=False, plot_raw_lc=False, transit_at_0=False,
+                 cadence='lc', transit_duration_buff=1.0,
+                 remove_fits=False, plot_clean_lc=False,
+                 plot_raw_lc=False, transit_at_0=False,
                  cleaning_window=False, save=False, filename=False,
-                 mask_primary=True, mask_secondary=False, binsize=0.002,
+                 mask_primary=True, mask_secondary=False, nphasebins=500,
                  return_all=False):
         """
         Returns the phase curve of an object of interest observed by TESS.
+
+        Parameters
+        ----------
+        transit_epoch : float or int
+            Time of transit in BJD - 2454833
+        cadence : str, {'lc', 'sc'}
+          The temporal cadence of the data. 'lc' for long cadence (30 min),
+          'sc' for short cadence (1 min). Default is 'lc'.
         """
         super().__init__(period, transit_duration, transit_epoch,
                          transit_duration_buff=transit_duration_buff,
@@ -514,7 +526,7 @@ class Kepler(Phasecurve):
                          plot_raw_lc=plot_raw_lc, transit_at_0=transit_at_0,
                          cleaning_window=cleaning_window, save=save,
                          filename=filename, mask_primary=mask_primary,
-                         mask_secondary=mask_secondary, binsize=binsize,
+                         mask_secondary=mask_secondary, nphasebins=nphasebins,
                          return_all=return_all)
 
         # make a directory for this target if it doesn't aready exist
@@ -523,6 +535,8 @@ class Kepler(Phasecurve):
             os.makedirs(self.kic_dir)
 
         self.kic = str(kic)
+
+        self.cadence = cadence[0] + 'l' + cadence[1]
 
         (self._raw_time,
          self._raw_flux,
@@ -544,22 +558,28 @@ class Kepler(Phasecurve):
         flux = np.array([])
         flux_err = np.array([])
 
-        # download the fits files if not in directory
         mast_url = 'http://archive.stsci.edu/pub/kepler/lightcurves//'
-        kic_short = self.kic[:5]
-        kic_url = mast_url + kic_short + '/' + self.kic + '/'
+        # correct for zero padding in KIC ID
+        nzero = 9 - len(self.kic)
+        kic_long = nzero * "0" + str(self.kic)
+        kic_url = mast_url + kic_long[:4] + '/' + kic_long + '/'
         url_content = requests.get(kic_url).text
         soup = BeautifulSoup(url_content, 'html.parser')
 
-        # check for 404
+        # check for 404 error
         if '404' in str(soup.find_all('title')):
-            print('The requested URL' /pub/kepler/lightcurves//10748/10748390/ was not found on this server)
+            print('ERROR: The requested URL ' + kic_url +
+                  ' was not found on this server')
+            exit()
+
         fits_files = [node.get('href')
                       for node in soup.find_all('a')
-                      if node.get('href').endswith('fits')]
-        # print(kic_url, url_content, soup)
-        # exit()
+                      if node.get('href').endswith('fits')
+                      and self.cadence in node.get('href')]
+
         for fits_file in fits_files:
+
+            # only download the fits files if not already in directory
             if not os.path.isfile(self.kic_dir + '/' + fits_file):
                 print("Downloading the fits files " + fits_file +
                       " for KIC " + self.kic)
@@ -568,7 +588,8 @@ class Kepler(Phasecurve):
 
             # unpack the fits file
             raw_time, raw_flux, raw_flux_err = _unpack_fits(self.kic_dir +
-                                                            '/' + fits_file)
+                                                            '/' + fits_file,
+                                                            'SAP_QUALITY')
             time = np.append(time, raw_time)
             flux = np.append(flux, raw_flux)
             flux_err = np.append(flux_err, raw_flux_err)
@@ -657,7 +678,7 @@ class Kepler(Phasecurve):
                 flux_all = np.append(flux_all, phasma_flux)
                 flux_err_all = np.append(flux_err_all, phasma_flux_err)
 
-            # store binned data by sector
+            # store binned data by section of continuous data
             phasma_p = self._phase(phasma_t)
             p, t, f, ferr = self._fold(phasma_p,
                                         phasma_t,
@@ -667,7 +688,7 @@ class Kepler(Phasecurve):
             if self.transit_at_0:
                 p, f, ferr = _redefine_phase(p, f, ferr)
 
-            bin_phase, bin_time, bin_flux, bin_flux_err = _bin(self.binsize, p,
+            bin_phase, bin_time, bin_flux, bin_flux_err = _bin(self.nphasebins, p,
                                                                t, f, ferr)
 
             tji.append(list(bin_time))
@@ -691,14 +712,14 @@ class Kepler(Phasecurve):
         return phase, np.mean(tji, axis=0), flux, flux_err
 
 
-def _unpack_fits(fits_path):
+def _unpack_fits(fits_path, quality_str):
     # unpack the fits file
     open_fits = fits.open(fits_path)
     fits_data = open_fits[1].data
     raw_time = fits_data.field('TIME')
     raw_flux = fits_data.field('PDCSAP_FLUX')
     raw_flux_err = fits_data.field('PDCSAP_FLUX_ERR')
-    data_quality = fits_data.field('QUALITY')
+    data_quality = fits_data.field(quality_str)
 
     # remove flagged data
     good_data = (data_quality == 0) & (~np.isnan(raw_flux))
@@ -754,11 +775,12 @@ def _redefine_phase(phase, flux, flux_err):
     return new_phase, new_flux, new_flux_err
 
 
-def _bin(binsize, phase, time, flux, flux_err):
+def _bin(nbins, phase, time, flux, flux_err):
     # bin the combined data from the two sectors
     bin_start = phase[0]
     bin_end = phase[-1]
-    bin_edges = np.arange(bin_start, bin_end, binsize)
+    bin_edges, binsize = np.linspace(bin_start, bin_end, nbins,
+                                     endpoint=False, retstep=True)
     binned_phase = np.arange(bin_start + binsize / 2,
                              bin_end + binsize / 2,
                              binsize)
@@ -843,12 +865,15 @@ def _offset_correction(phases, fluxes, weights):
         return np.nansum(chisqr_j)
 
     theta = np.zeros(fluxes.shape)
+
     for row in range(len(fluxes)):
         best_row_offset = optimize.fmin(_cost_function, theta[row][0],
                                         args=(theta, row, fluxes, weights),
                                         disp=False)
         theta[row] = best_row_offset
 
+    print(phases, type(phases))
+    exit()
     mean_phase = np.mean(phases, axis=0)
     corrected_flux, corrected_flux_err = _weighted_avg(fluxes - theta, weights)
 
