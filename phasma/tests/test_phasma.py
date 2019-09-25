@@ -33,9 +33,3 @@ class TestKepler(object):
         phase, flux, flux_err = (self.hatp11b.phase,
                                  self.hatp11b.flux,
                                  self.hatp11b.flux_err)
-        plt.errorbar(phase, flux, flux_err, fmt='o')
-        plt.show()
-        print(phase, flux, flux_err)
-
-
-TestKepler().test_final_phasecurve()
