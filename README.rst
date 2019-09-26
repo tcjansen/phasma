@@ -1,81 +1,26 @@
-How I want this to work:
+phasma: A moving median detrending algorithm for TESS and Kepler phase curves
+-----------------------------------------------------------------------------
 
-There will be a folder titled 'phamsma', and inside are modules specific to 
-classes:
---> licenses
-	--> LICENSE.rst
---> docs
-	--> index.rst  # has intro, installation and setup, getting started, etc
-	--> phasma
-		--> target.rst
-		--> phasecurve.rst
-		--> lightcurve.rst
---> phasma
-	--> __init__.py
-	--> target.py
-	--> phasecurve.py
-	--> lightcurve.py
-	--> tests
-		--> test_target.py
-		--> test_phasecurve.py
-		--> test_lightcurve.py
+I'll write a better README later, but here's something to get started:
 
-Then the usage would go like:
+First clone this repo in the terminal:
 
->>> from phasma.target import Target
->>> from phasma.phasecurve import Phasecurve
->>> from phasma.lightcurve import Lightcurve
+`git clone https://github.com/tcjansen/phasma.git`
+
+Simple example for HAT-P-7b as observed by Kepler:
+
+>>> import phasma
+>>> import astropy.units as u
+>>> import matplotlib.pyplot as plt
 >>>
->>> import astropy.constants as u
->>> from astropy.time import Time
+>>> kic = 10666592
+>>> period = 2.20473540 * u.day  # units are a must
+>>> transit_duration = 4.0398 * u.hr
+>>> transit_epoch = 54.358470 + (2454900 - 2454833)
+>>>
+>>> hatp7b = phasma.Kepler(kic, period, transit_duration, transit_epoch)
+>>> phase, flux, flux_err = (hatp7b.phase, hatp7b.flux, hatp7b.flux_err)
+>>>
+>>> plt.errorbar(phase, flux, flux_err, fmt='o')
 
-define target parameters
-
->>> tic_id = '231663901'
->>> orbital_period = 1.43036763 * u.day
->>> transit_epoch = Time(2455392.31659, format='jd')  # approximate BJD
->>> transit_duration = 1.638765 * u.hr
-
-make the target object for phasma
-
->>> target_object = Target(tic_id, orbital_period, transit_epoch, transit_duration)
-
-then you could do things like
-
->>> target_object.tic_id  # can be used for convenient file naming, etc
-231663901
-
-make a phase curve object
-
->>> target_phasecurve = Phasecurve(target_object)
-
-plot the phase curve
-
->>> target_phasecurve.plot
-
-write the phase curve to a file
-
->>> target_phasecurve.write(filename='custom_name.fits')
-
-fit to beer model
-
->>> target_phasecurve.fit(model=beer)
-
-where beer is a function name such thatone can call their own function if they 
-wish
-
-fit to cosine model
-
->>> target_phasecurve.fit(model=cosine)
-
-make a light curve object
-
->>> target_lightcurve = Lightcurve(target_object)
-
-plot the light curve
-
->>> target_lightcurve.plot
-
-write the light curve to a file
-
->>> target_lightcurve.write
+If the above doesn't work please let me know!
