@@ -450,8 +450,7 @@ class Tess(Phasecurve):
     transit_duration : `~astropy.units.Quantity`
         Duration of the transit, i.e. t_14
     transit_epoch : float or int
-        Time of transit (defined different for Kepler and TESS, see their
-        class docstrings for clarification)
+        Time of transit in BJD - 2457000
     sectors : list or tuple
         Sector(s) of interest
     remove_curl : bool, optional
