@@ -45,30 +45,31 @@ class Phasecurve(object):
         Default is 1.0.
     remove_fits : bool, optional
         Set to True if you want to remove the downloaded raw light curve
-        fits files. This is recommended to save disk space if you don't plan on
-        running phasma multiple times for the same object. Default is False.
+        fits files. This is recommended to save disk space if you don't
+        plan on running phasma multiple times for the same object.
+        Default is False.
     plot_clean_lc : bool, optional
         Plots the light curve with outliers removed. Default is False.
     plot_raw_lc : bool, optional
         Plots the raw light curve for all quarters provided.
     transit_at_0 : bool, optional
-        Set to True to define the phase such that the transit occurs at
-        phase = 0.0. Default is such that the secondary eclipse occurs at
-        phase = 0.0.
+        Set to False to define the phase such that the primary transit
+        occurs at phase = +/- 0.5. Default is such that the primary occurs
+        at phase = 0.0.
     cleaning_window : bool, float, or int, optional
         For defining a custom moving median window (in units of days) for
         outlier removal. The default is either one hundreth of the transit
         duration or 10 * cadence, whichever is larger.
     save : bool, optional
-        Set to False to prevent from automatically saving the phase curve to a
-        file. Default is True.
+        Set to False to prevent from automatically saving the phase curve
+        to a file. Default is True.
     filename : str, optional
         The path for saving the phase curve to. Default is the current
         directory with the filename "phasecurve.csv"
     mask_primary : bool, optional
-        Set to False to keep the transit in the analysis. Note: values
+        Set to True to remove the transit from the analysis. Note: values
         surrounding the transit in the final phase curvewill be affected
-        by the moving median. Default is True.
+        by the moving median. Default is False.
     mask_secondary : bool, optional
         Set to False to keep the secondary eclipse in the analysis.
         Note: values surrounding the secondary eclipse in the final
@@ -83,9 +84,9 @@ class Phasecurve(object):
     @u.quantity_input(period=u.day, transit_duration=u.hr)
     def __init__(self, period, transit_duration, transit_epoch,
                  transit_duration_buff=1.0, remove_fits=False,
-                 plot_clean_lc=False, plot_raw_lc=False, transit_at_0=False,
+                 plot_clean_lc=False, plot_raw_lc=False, transit_at_0=True,
                  cleaning_window=False, save=True, filename=False,
-                 mask_primary=True, mask_secondary=False, nphasebins=500,
+                 mask_primary=False, mask_secondary=False, nphasebins=500,
                  return_all=False):
 
         self.period = period
@@ -107,7 +108,7 @@ class Phasecurve(object):
         if not filename:
             filename = directory + '/phasecurve.csv'
 
-        print("Writing the phase curve to " + filename " ...")
+        print("Writing the phase curve to " + filename + " ...")
         with open(filename, 'w') as w:
             for i, j, k, m in zip(self.time,
                                   self.phase,
@@ -303,7 +304,8 @@ class Phasecurve(object):
                                            self.cleaning_window)
 
         # get the residuals
-        res = abs((trimmed_flux - moving_med_func(trimmed_t)) / trimmed_flux_err)
+        res = abs((trimmed_flux - moving_med_func(trimmed_t)) /
+                  trimmed_flux_err)
 
         # remove outliers
         outlier_cutoff = (1.4286 * stats.median_absolute_deviation(res) *
@@ -455,7 +457,8 @@ class Tess(Phasecurve):
     remove_curl : bool, optional
         Set to True to delete the curl files downloaded from MAST.
         This is recommended to save disk space if you don't plan on
-        running phasma multiple times for the same object. Default is False.
+        running phasma multiple times for the same object.
+        Default is False.
     transit_duration_buff : float or int, optional
         Coefficient on the transit duration, e.g. for a 10% uncertainty
         on the transit duration, you would want to set
@@ -464,30 +467,31 @@ class Tess(Phasecurve):
         Default is 1.0.
     remove_fits : bool, optional
         Set to True if you want to remove the downloaded raw light curve
-        fits files. This is recommended to save disk space if you don't plan on
-        running phasma multiple times for the same object. Default is False.
+        fits files. This is recommended to save disk space if you don't
+        plan on running phasma multiple times for the same object.
+        Default is False.
     plot_clean_lc : bool, optional
         Plots the light curve with outliers removed. Default is False.
     plot_raw_lc : bool, optional
         Plots the raw light curve for all quarters provided.
     transit_at_0 : bool, optional
-        Set to True to define the phase such that the transit occurs at
-        phase = 0.0. Default is such that the secondary eclipse occurs at
-        phase = 0.0.
+        Set to False to define the phase such that the primary transit
+        occurs at phase = +/- 0.5. Default is such that the primary occurs
+        at phase = 0.0.
     cleaning_window : bool, float, or int, optional
         For defining a custom moving median window (in units of days) for
         outlier removal. The default is either one hundreth of the transit
         duration or 10 * cadence, whichever is larger.
     save : bool, optional
-        Set to False to prevent from automatically saving the phase curve to a
-        file. Default is True.
+        Set to False to prevent from automatically saving the phase curve
+        to a file. Default is True.
     filename : str, optional
         The path for saving the phase curve to. Default is the current
         directory with the filename "phasecurve.csv"
     mask_primary : bool, optional
-        Set to False to keep the transit in the analysis. Note: values
+        Set to True to remove the transit from the analysis. Note: values
         surrounding the transit in the final phase curvewill be affected
-        by the moving median. Default is True.
+        by the moving median. Default is False.
     mask_secondary : bool, optional
         Set to False to keep the secondary eclipse in the analysis.
         Note: values surrounding the secondary eclipse in the final
@@ -503,8 +507,8 @@ class Tess(Phasecurve):
     def __init__(self, tic, period, transit_duration, transit_epoch, sectors,
                  remove_curl=False, transit_duration_buff=1.0,
                  remove_fits=False, plot_clean_lc=False, plot_raw_lc=False,
-                 transit_at_0=False, cleaning_window=False, save=True,
-                 filename=False, mask_primary=True, mask_secondary=False,
+                 transit_at_0=True, cleaning_window=False, save=True,
+                 filename=False, mask_primary=False, mask_secondary=False,
                  nphasebins=500, return_all=False):
         super().__init__(period, transit_duration, transit_epoch,
                          transit_duration_buff=transit_duration_buff,
@@ -536,7 +540,7 @@ class Tess(Phasecurve):
          self.flux_err) = self._wrap()
 
         if save:
-            write(self, directory=self.tic_dir, filename=filename)
+            self.write(directory=self.tic_dir, filename=filename)
 
     def _get_raw_lightcurve(self):
         """Downloads the TESS light curves from MAST and puts it all
@@ -612,9 +616,9 @@ class Kepler(Phasecurve):
     def __init__(self, kic, period, transit_duration, transit_epoch,
                  cadence='lc', transit_duration_buff=1.0,
                  remove_fits=False, plot_clean_lc=False,
-                 plot_raw_lc=False, transit_at_0=False,
+                 plot_raw_lc=False, transit_at_0=True,
                  cleaning_window=False, save=True, filename=False,
-                 mask_primary=True, mask_secondary=False, nphasebins=500,
+                 mask_primary=False, mask_secondary=False, nphasebins=500,
                  return_all=False):
         """
         Returns the phase curve of an object of interest observed by TESS.
@@ -638,30 +642,31 @@ class Kepler(Phasecurve):
             Default is 1.0.
         remove_fits : bool, optional
             Set to True if you want to remove the downloaded raw light curve
-            fits files. This is recommended to save disk space if you don't plan on
-            running phasma multiple times for the same object. Default is False.
+            fits files. This is recommended to save disk space if you don't
+            plan on running phasma multiple times for the same object.
+            Default is False.
         plot_clean_lc : bool, optional
             Plots the light curve with outliers removed. Default is False.
         plot_raw_lc : bool, optional
             Plots the raw light curve for all quarters provided.
         transit_at_0 : bool, optional
-            Set to True to define the phase such that the transit occurs at
-            phase = 0.0. Default is such that the secondary eclipse occurs at
-            phase = 0.0.
+            Set to False to define the phase such that the primary transit
+            occurs at phase = +/- 0.5. Default is such that the primary occurs
+            at phase = 0.0.
         cleaning_window : bool, float, or int, optional
             For defining a custom moving median window (in units of days) for
             outlier removal. The default is either one hundreth of the transit
             duration or 10 * cadence, whichever is larger.
         save : bool, optional
-            Set to False to prevent from automatically saving the phase curve to a
-            file. Default is True.
+            Set to False to prevent from automatically saving the phase curve
+            to a file. Default is True.
         filename : str, optional
             The path for saving the phase curve to. Default is the current
             directory with the filename "phasecurve.csv"
         mask_primary : bool, optional
-            Set to False to keep the transit in the analysis. Note: values
+            Set to True to remove the transit from the analysis. Note: values
             surrounding the transit in the final phase curvewill be affected
-            by the moving median. Default is True.
+            by the moving median. Default is False.
         mask_secondary : bool, optional
             Set to False to keep the secondary eclipse in the analysis.
             Note: values surrounding the secondary eclipse in the final
@@ -703,7 +708,7 @@ class Kepler(Phasecurve):
          self.flux_err) = self._wrap()
 
         if save:
-            write(self, directory=self.tic_dir, filename=filename)
+            self.write(directory=self.kic_dir, filename=filename)
 
     def _get_raw_lightcurve(self):
         """Downloads the Kepler light curves from MAST and puts
