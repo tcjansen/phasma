@@ -284,7 +284,7 @@ class Phasecurve(object):
 
     def _clean(self, time, flux, flux_err):
         """Applies a moving median function and discards outliers
-        defined by flux > 1.4286 * MAD * sqrt(2) * erfcinv(1/n)"""
+        defined by flux > 1.4826 * MAD * sqrt(2) * erfcinv(1/n)"""
         transit_phase = (self.transit_duration *
                          self.transit_duration_buff /
                          self.period / 2).to(u.Unit('')).value
@@ -308,7 +308,7 @@ class Phasecurve(object):
                   trimmed_flux_err)
 
         # remove outliers
-        outlier_cutoff = (1.4286 * stats.median_absolute_deviation(res) *
+        outlier_cutoff = (1.4826 * stats.median_absolute_deviation(res) *
                           np.sqrt(2) * erfcinv(1 / len(res)))
         outliers = res > outlier_cutoff
 
