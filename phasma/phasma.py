@@ -27,59 +27,6 @@ class Phasecurve(object):
     """
     Returns a phase curve detrended by phasma.
     Parent class for Tess and Kepler.
-
-    Parameters
-    ----------
-    period : `~astropy.units.Quantity`
-        Orbital period
-    transit_duration : `~astropy.units.Quantity`
-        Duration of the transit, i.e. t_14
-    transit_epoch : float or int
-        Time of transit (defined different for Kepler and TESS, see their
-        class docstrings for clarification)
-    transit_duration_buff : float or int, optional
-        Coefficient on the transit duration, e.g. for a 10% uncertainty
-        on the transit duration, you would want to set
-        transit_duration_buff = 1.1. If you want to double the
-        transit_duration, set transit_duration_buff = 2, etc.
-        Default is 1.0.
-    remove_fits : bool, optional
-        Set to True if you want to remove the downloaded raw light curve
-        fits files. This is recommended to save disk space if you don't
-        plan on running phasma multiple times for the same object.
-        Default is False.
-    plot_clean_lc : bool, optional
-        Plots the light curve with outliers removed. Default is False.
-    plot_raw_lc : bool, optional
-        Plots the raw light curve for all quarters provided.
-    transit_at_0 : bool, optional
-        Set to False to define the phase such that the primary transit
-        occurs at phase = +/- 0.5. Default is such that the primary occurs
-        at phase = 0.0.
-    cleaning_window : bool, float, or int, optional
-        For defining a custom moving median window (in units of days) for
-        outlier removal. The default is either one hundreth of the transit
-        duration or 10 * cadence, whichever is larger.
-    save : bool, optional
-        Set to False to prevent from automatically saving the phase curve
-        to a file. Default is True.
-    filename : str, optional
-        The path for saving the phase curve to. Default is the current
-        directory with the filename "phasecurve.csv"
-    mask_primary : bool, optional
-        Set to True to remove the transit from the analysis. Note: values
-        surrounding the transit in the final phase curvewill be affected
-        by the moving median. Default is False.
-    mask_secondary : bool, optional
-        Set to False to keep the secondary eclipse in the analysis.
-        Note: values surrounding the secondary eclipse in the final
-        phase curve will be affected by the moving median.
-    nphasebins : int, optional
-        Number of data points in the final binned phase curve.
-        Default is 500.
-    return_all : bool, optional
-        Returns the folded, unbinned phase curve. Default is False.
-        (NEEDS REVIEW)
     """
     @u.quantity_input(period=u.day, transit_duration=u.hr)
     def __init__(self, period, transit_duration, transit_epoch,
@@ -87,8 +34,64 @@ class Phasecurve(object):
                  plot_clean_lc=False, plot_raw_lc=False, transit_at_0=True,
                  cleaning_window=False, save=True, filename=False,
                  mask_primary=False, mask_secondary=False, nphasebins=500,
-                 return_all=False):
+                 offset_correction=False, medianbin=False):
+        """
 
+        Parameters
+        ----------
+        period : `~astropy.units.Quantity`
+            Orbital period
+        transit_duration : `~astropy.units.Quantity`
+            Duration of the transit, i.e. t_14
+        transit_epoch : float or int
+            Time of transit (defined different for Kepler and TESS, see their
+            class docstrings for clarification)
+        transit_duration_buff : float or int, optional
+            Coefficient on the transit duration, e.g. for a 10% uncertainty
+            on the transit duration, you would want to set
+            transit_duration_buff = 1.1. If you want to double the
+            transit_duration, set transit_duration_buff = 2, etc.
+            Default is 1.0.
+        remove_fits : bool, optional
+            Set to True if you want to remove the downloaded raw light curve
+            fits files. This is recommended to save disk space if you don't
+            plan on running phasma multiple times for the same object.
+            Default is False.
+        plot_clean_lc : bool, optional
+            Plots the light curve with outliers removed. Default is False.
+        plot_raw_lc : bool, optional
+            Plots the raw light curve for all quarters provided.
+        transit_at_0 : bool, optional
+            Set to False to define the phase such that the primary transit
+            occurs at phase = +/- 0.5. Default is such that the primary occurs
+            at phase = 0.0.
+        cleaning_window : bool, float, or int, optional
+            For defining a custom moving median window (in units of days) for
+            outlier removal. The default is either one hundreth of the transit
+            duration or 10 * cadence, whichever is larger.
+        save : bool, optional
+            Set to False to prevent from automatically saving the phase curve
+            to a file. Default is True.
+        filename : str, optional
+            The path for saving the phase curve to. Default is the current
+            directory with the filename "phasecurve.csv"
+        mask_primary : bool, optional
+            Set to True to remove the transit from the analysis. Note: values
+            surrounding the transit in the final phase curvewill be affected
+            by the moving median. Default is False.
+        mask_secondary : bool, optional
+            Set to False to keep the secondary eclipse in the analysis.
+            Note: values surrounding the secondary eclipse in the final
+            phase curve will be affected by the moving median.
+        nphasebins : int or None, optional
+            Number of data points in the final binned phase curve.
+            Set to None to return all data points (excluding outliers).
+            Default is 500.
+        offset_correction : bool, optional
+            NEEDs WORK. Finds the DC offsets which minimizes the cost function
+            defined in Jansen & Kipping 2018 (see Figure 5 and Section
+            2.7 for a more detailed explanation). Default is False.
+        """
         self.period = period
         self.transit_duration = transit_duration
         self.transit_epoch = transit_epoch
@@ -101,7 +104,8 @@ class Phasecurve(object):
         self.mask_primary = mask_primary
         self.mask_secondary = mask_secondary
         self.nphasebins = nphasebins
-        self.return_all = return_all
+        self.offset_correction = offset_correction
+        self.medianbin = medianbin
 
     def write(self, directory=None, filename=False):
         """Writes the phase curve to a csv file."""
@@ -110,27 +114,24 @@ class Phasecurve(object):
 
         print("Writing the phase curve to " + filename + " ...")
         with open(filename, 'w') as w:
-            for i, j, k, m in zip(self.time,
-                                  self.phase,
-                                  self.flux,
-                                  self.flux_err):
+            for i, j, m in zip(self.phase,
+                               self.flux,
+                               self.flux_err):
                 w.write(str(i) + ',' +
                         str(j) + ',' +
-                        str(k) + ',' +
                         str(m) + '\n')
         return
 
     def plot(self, show=True, save=False, file_format='png', bin=False,
              alpha=0.5):
         """Plots the phase curve. NEEDS REVIEW"""
-        time = self.time
         phase = self.phase
         flux = self.flux
         flux_err = self.flux_err
 
         if bin:
-            phase, time, flux, flux_err = _bin(self.nphasebins, phase, time,
-                                               flux, flux_err)
+            phase, flux, flux_err = _bin(self.nphasebins, phase,
+                                         flux, flux_err)
 
         plt.figure(figsize=(16, 5))
         plt.errorbar(phase, flux, yerr=flux_err,
@@ -304,13 +305,13 @@ class Phasecurve(object):
                                            self.cleaning_window)
 
         # get the residuals
-        res = abs((trimmed_flux - moving_med_func(trimmed_t)) /
-                  trimmed_flux_err)
+        res = ((trimmed_flux - moving_med_func(trimmed_t)) /
+               trimmed_flux_err)
 
         # remove outliers
         outlier_cutoff = (1.4826 * stats.median_absolute_deviation(res) *
                           np.sqrt(2) * erfcinv(1 / len(res)))
-        outliers = res > outlier_cutoff
+        outliers = abs(res) > outlier_cutoff
 
         trimmed_t = trimmed_t[~outliers]
         trimmed_flux = trimmed_flux[~outliers]
@@ -334,16 +335,16 @@ class Phasecurve(object):
          split_flux_err) = self._split_lc_at_gap(true_gap_starts,
                                                  true_gap_ends)
 
-        # create empty arrays to store data
-        pji = np.zeros((len(split_time), self.nphasebins))
-        tji = np.zeros((len(split_time), self.nphasebins))
-        fji = np.zeros((len(split_time), self.nphasebins))
-        wji = np.zeros((len(split_time), self.nphasebins))
+        if self.offset_correction:
+            # create empty arrays to store data
+            pji = np.zeros((len(split_time), self.nphasebins))
+            tji = np.zeros((len(split_time), self.nphasebins))
+            fji = np.zeros((len(split_time), self.nphasebins))
+            wji = np.zeros((len(split_time), self.nphasebins))
 
-        if self.return_all:
-            time_all = np.array([])
-            flux_all = np.array([])
-            flux_err_all = np.array([])
+        time_all = np.array([])
+        flux_all = np.array([])
+        flux_err_all = np.array([])
 
         # loop through data separated by gaps
         for continuous in range(len(split_time)):
@@ -389,118 +390,73 @@ class Phasecurve(object):
             # apply phasma to cleaned data
             (phasma_t,
              phasma_flux,
-             phasma_flux_err) = _phasma_detrend(self.period.value,
+             phasma_flux_err) = _phasma_detrend(self.period.to(u.day).value,
                                                 clean_t,
                                                 clean_flux,
                                                 clean_flux_err)
 
-            if self.return_all:
-                # combine semisectors and sectors
-                time_all = np.append(time_all, phasma_t)
-                flux_all = np.append(flux_all, phasma_flux)
-                flux_err_all = np.append(flux_err_all, phasma_flux_err)
-
-            # store binned data by section of continuous data
             phasma_p = self._phase(phasma_t)
             p, t, f, ferr = self._fold(phasma_p,
                                        phasma_t,
                                        phasma_flux,
                                        phasma_flux_err)
 
-            # put the transit at phase = 0 if called for
-            if self.transit_at_0:
-                p, f, ferr = _redefine_phase(p, f, ferr)
+            # combine semisectors and sectors
+            time_all = np.append(time_all, phasma_t)
+            flux_all = np.append(flux_all, phasma_flux)
+            flux_err_all = np.append(flux_err_all, phasma_flux_err)
 
-            # bin the phase curve
-            (bin_phase,
-             bin_time,
-             bin_flux,
-             bin_flux_err) = _bin(self.nphasebins, p, t, f, ferr)
+            if self.offset_correction:
 
-            # put the binned phase curve into one big array
-            tji[continuous] = bin_time
-            pji[continuous] = bin_phase
-            fji[continuous] = bin_flux
-            wji[continuous] = 1 / (bin_flux_err ** 2)
+                # fold the light curve and sort into a phase curve
+                phasma_p = self._phase(phasma_t)
+                p, t, f, ferr = self._fold(phasma_p,
+                                           phasma_t,
+                                           phasma_flux,
+                                           phasma_flux_err)
+
+                # put the transit at phase = 0 if called for
+                if self.transit_at_0:
+                    p, f, ferr = _redefine_phase(p, f, ferr)
+
+                # bin the phase curve
+                (bin_phase,
+                 bin_flux,
+                 bin_flux_err) = _bin(self.nphasebins, p, f, ferr)
+
+                # put the binned phase curve into one big array
+                tji[continuous] = bin_time
+                pji[continuous] = bin_phase
+                fji[continuous] = bin_flux
+                wji[continuous] = 1 / (bin_flux_err ** 2)
 
         if self.plot_clean_lc:
             plt.show()
 
-        if self.return_all:
-            # fold the combined data and return
-            phase = self._phase(time_all)
-            return self._fold(phase, time_all, flux_all, flux_err_all)
+        if self.offset_correction:
+            # correct for the arbitrary offset created by
+            # the moving median filter
+            phase, flux, flux_err = _offset_correction(pji, fji, wji)
+            return phase, np.mean(tji, axis=0), flux, flux_err
 
-        # correct for the arbitrary offset created by the moving median filter
-        phase, flux, flux_err = _offset_correction(pji, fji, wji)
+        phase_all = self._phase(time_all)
 
-        return phase, np.mean(tji, axis=0), flux, flux_err
+        phase, time, flux, flux_err = self._fold(phase_all, time_all,
+                                                 flux_all, flux_err_all)
+
+        if self.transit_at_0:
+            phase, flux, flux_err = _redefine_phase(phase, flux, flux_err)
+
+        if self.nphasebins is not None:
+            return _bin(self.nphasebins, phase, flux, flux_err,
+                        median=self.medianbin)
+        else:
+            return phase, flux, flux_err
 
 
 class Tess(Phasecurve):
     """
     Returns the phase curve of an object of interest observed by TESS.
-
-    Parameters
-    ----------
-    tic : int or str
-        The TESS Input Catalog (TIC) ID of the object
-    period : `~astropy.units.Quantity`
-        Orbital period
-    transit_duration : `~astropy.units.Quantity`
-        Duration of the transit, i.e. t_14
-    transit_epoch : float or int
-        Time of transit in BJD - 2457000
-    sectors : list or tuple
-        Sector(s) of interest
-    remove_curl : bool, optional
-        Set to True to delete the curl files downloaded from MAST.
-        This is recommended to save disk space if you don't plan on
-        running phasma multiple times for the same object.
-        Default is False.
-    transit_duration_buff : float or int, optional
-        Coefficient on the transit duration, e.g. for a 10% uncertainty
-        on the transit duration, you would want to set
-        transit_duration_buff = 1.1. If you want to double the
-        transit_duration, set transit_duration_buff = 2, etc.
-        Default is 1.0.
-    remove_fits : bool, optional
-        Set to True if you want to remove the downloaded raw light curve
-        fits files. This is recommended to save disk space if you don't
-        plan on running phasma multiple times for the same object.
-        Default is False.
-    plot_clean_lc : bool, optional
-        Plots the light curve with outliers removed. Default is False.
-    plot_raw_lc : bool, optional
-        Plots the raw light curve for all quarters provided.
-    transit_at_0 : bool, optional
-        Set to False to define the phase such that the primary transit
-        occurs at phase = +/- 0.5. Default is such that the primary occurs
-        at phase = 0.0.
-    cleaning_window : bool, float, or int, optional
-        For defining a custom moving median window (in units of days) for
-        outlier removal. The default is either one hundreth of the transit
-        duration or 10 * cadence, whichever is larger.
-    save : bool, optional
-        Set to False to prevent from automatically saving the phase curve
-        to a file. Default is True.
-    filename : str, optional
-        The path for saving the phase curve to. Default is the current
-        directory with the filename "phasecurve.csv"
-    mask_primary : bool, optional
-        Set to True to remove the transit from the analysis. Note: values
-        surrounding the transit in the final phase curvewill be affected
-        by the moving median. Default is False.
-    mask_secondary : bool, optional
-        Set to False to keep the secondary eclipse in the analysis.
-        Note: values surrounding the secondary eclipse in the final
-        phase curve will be affected by the moving median.
-    nphasebins : int, optional
-        Number of data points in the final binned phase curve.
-        Default is 500.
-    return_all : bool, optional
-        Returns the folded, unbinned phase curve. Default is False.
-        (NEEDS REVIEW)
     """
     @u.quantity_input(period=u.day, transit_duration=u.hr)
     def __init__(self, tic, period, transit_duration, transit_epoch, sectors,
@@ -508,7 +464,73 @@ class Tess(Phasecurve):
                  remove_fits=False, plot_clean_lc=False, plot_raw_lc=False,
                  transit_at_0=True, cleaning_window=False, save=True,
                  filename=False, mask_primary=False, mask_secondary=False,
-                 nphasebins=500, return_all=False):
+                 nphasebins=500, offset_correction=False, medianbin=False):
+        """
+
+        Parameters
+        ----------
+        tic : int or str
+            The TESS Input Catalog (TIC) ID of the object
+        period : `~astropy.units.Quantity`
+            Orbital period
+        transit_duration : `~astropy.units.Quantity`
+            Duration of the transit, i.e. t_14
+        transit_epoch : float or int
+            Time of transit in BJD - 2457000
+        sectors : list or tuple
+            Sector(s) of interest
+        remove_curl : bool, optional
+            Set to True to delete the curl files downloaded from MAST.
+            This is recommended to save disk space if you don't plan on
+            running phasma multiple times for the same object.
+            Default is False.
+        transit_duration_buff : float or int, optional
+            Coefficient on the transit duration, e.g. for a 10% uncertainty
+            on the transit duration, you would want to set
+            transit_duration_buff = 1.1. If you want to double the
+            transit_duration, set transit_duration_buff = 2, etc.
+            Default is 1.0.
+        remove_fits : bool, optional
+            Set to True if you want to remove the downloaded raw light curve
+            fits files. This is recommended to save disk space if you don't
+            plan on running phasma multiple times for the same object.
+            Default is False.
+        plot_clean_lc : bool, optional
+            Plots the light curve with outliers removed. Default is False.
+        plot_raw_lc : bool, optional
+            Plots the raw light curve for all quarters provided.
+        transit_at_0 : bool, optional
+            Set to False to define the phase such that the primary transit
+            occurs at phase = +/- 0.5. Default is such that the primary occurs
+            at phase = 0.0.
+        cleaning_window : bool, float, or int, optional
+            For defining a custom moving median window (in units of days) for
+            outlier removal. The default is either one hundreth of the transit
+            duration or 10 * cadence, whichever is larger.
+        save : bool, optional
+            Set to False to prevent from automatically saving the phase curve
+            to a file. Default is True.
+        filename : str, optional
+            The path for saving the phase curve to. Default is the current
+            directory with the filename "phasecurve.csv"
+        mask_primary : bool, optional
+            Set to True to remove the transit from the analysis. Note: values
+            surrounding the transit in the final phase curvewill be affected
+            by the moving median. Default is False.
+        mask_secondary : bool, optional
+            Set to False to keep the secondary eclipse in the analysis.
+            Note: values surrounding the secondary eclipse in the final
+            phase curve will be affected by the moving median.
+        nphasebins : int or None, optional
+            Number of data points in the final binned phase curve.
+            Set to None to return all data points (excluding outliers).
+            Default is 500.
+        offset_correction : bool, optional
+            (NEEDS REVIEW)
+            Finds the DC offsets which minimizes the cost function
+            defined in Jansen & Kipping 2018 (see Figure 5 and Section
+            2.7 for a more detailed explanation). Default is False.
+        """
         super().__init__(period, transit_duration, transit_epoch,
                          transit_duration_buff=transit_duration_buff,
                          remove_fits=remove_fits, plot_clean_lc=plot_clean_lc,
@@ -516,7 +538,8 @@ class Tess(Phasecurve):
                          cleaning_window=cleaning_window, save=save,
                          filename=filename, mask_primary=mask_primary,
                          mask_secondary=mask_secondary, nphasebins=nphasebins,
-                         return_all=return_all)
+                         offset_correction=offset_correction,
+                         medianbin=medianbin)
 
         # make a directory for this target if it doesn't aready exist
         self.tic_dir = './' + str(tic)
@@ -534,7 +557,6 @@ class Tess(Phasecurve):
         self.cadence = stats.mode(np.diff(self._raw_time)).mode[0] * u.day
 
         (self.phase,
-         self.time,
          self.flux,
          self.flux_err) = self._wrap()
 
@@ -618,7 +640,7 @@ class Kepler(Phasecurve):
                  plot_raw_lc=False, transit_at_0=True,
                  cleaning_window=False, save=True, filename=False,
                  mask_primary=False, mask_secondary=False, nphasebins=500,
-                 return_all=False):
+                 offset_correction=False, medianbin=False):
         """
         Returns the phase curve of an object of interest observed by TESS.
 
@@ -670,12 +692,15 @@ class Kepler(Phasecurve):
             Set to False to keep the secondary eclipse in the analysis.
             Note: values surrounding the secondary eclipse in the final
             phase curve will be affected by the moving median.
-        nphasebins : int, optional
+        nphasebins : int or None, optional
             Number of data points in the final binned phase curve.
+            Set to None to return all data points (excluding outliers).
             Default is 500.
-        return_all : bool, optional
-            Returns the folded, unbinned phase curve. Default is False.
+        offset_correction : bool, optional
             (NEEDS REVIEW)
+            Finds the DC offsets which minimizes the cost function
+            defined in Jansen & Kipping 2018 (see Figure 5 and Section
+            2.7 for a more detailed explanation). Default is False.
         """
         super().__init__(period, transit_duration, transit_epoch,
                          transit_duration_buff=transit_duration_buff,
@@ -684,7 +709,8 @@ class Kepler(Phasecurve):
                          cleaning_window=cleaning_window, save=save,
                          filename=filename, mask_primary=mask_primary,
                          mask_secondary=mask_secondary, nphasebins=nphasebins,
-                         return_all=return_all)
+                         offset_correction=offset_correction,
+                         medianbin=medianbin)
 
         # make a directory for this target if it doesn't aready exist
         self.kic_dir = './' + str(kic)
@@ -702,7 +728,6 @@ class Kepler(Phasecurve):
         self.cadence = stats.mode(np.diff(self._raw_time)).mode[0] * u.day
 
         (self.phase,
-         self.time,
          self.flux,
          self.flux_err) = self._wrap()
 
@@ -786,17 +811,15 @@ def _moving_median(x, y, y_err, window_size):
     moving_med_x = np.array([])  # x in middle of bins
     moving_med_y = np.array([])
     i = 0
-    while x[i] + window_size < x[-1]:
+    while x[i] + window_size <= x[-1]:
         in_window = (x >= x[i]) & (x < x[i] + window_size)
         moving_med_x = np.append(moving_med_x, np.nanmedian(x[in_window]))
         moving_med_y = np.append(moving_med_y, np.nanmedian(y[in_window]))
         i += 1
 
-    mid_window = window_size / 2
-    trim = (x >= x[0] + mid_window) & (x < x[-1] - mid_window)
-    moving_med_func = interp1d(moving_med_x, moving_med_y,
-                               fill_value='extrapolate')
+    moving_med_func = interp1d(moving_med_x, moving_med_y)
 
+    trim = (x >= moving_med_x[0]) & (x <= moving_med_x[-1])
     return x[trim], y[trim], y_err[trim], moving_med_func
 
 
@@ -826,18 +849,17 @@ def _redefine_phase(phase, flux, flux_err):
     return new_phase, new_flux, new_flux_err
 
 
-def _bin(nbins, phase, time, flux, flux_err):
+def _bin(nbins, x, flux, flux_err, median=False):
     """Bin data into nbins number of bins"""
-    bin_start = phase[0]
-    bin_end = phase[-1]
+    bin_start = x[0]
+    bin_end = x[-1]
     bin_edges, binsize = np.linspace(bin_start, bin_end, nbins,
                                      retstep=True)
-    binned_phase = np.linspace(bin_start + binsize / 2,
+    binned_x = np.linspace(bin_start + binsize / 2,
                                bin_end - binsize / 2,
                                nbins)
-    bin_indices = np.digitize(phase, bin_edges) - 1
+    bin_indices = np.digitize(x, bin_edges) - 1
 
-    binned_time = np.array([])
     binned_flux = np.array([])
     binned_error = np.array([])
     for i in range(max(bin_indices) + 1):
@@ -846,17 +868,15 @@ def _bin(nbins, phase, time, flux, flux_err):
         flux_to_bin = flux[bin]
         notnan = ~np.isnan(flux_to_bin)
         flux_to_bin = flux_to_bin[notnan]
-        time_to_bin = time[bin][notnan]
 
-        flux_err_to_bin = flux_err[bin]
-        flux_err_to_bin = flux_err_to_bin[notnan]
+        flux_err_to_bin = flux_err[bin][notnan]
 
         if len(flux_to_bin) == 1:
-            binned_time = np.append(binned_time, time_to_bin)
             binned_flux = np.append(binned_flux, flux_to_bin)
             binned_error = np.append(binned_error, flux_err_to_bin)
 
         elif len(flux_to_bin) > 1:
+            N = len(flux_to_bin)
             weights = 1 / (flux_err_to_bin ** 2)
             V1 = np.nansum(weights)
             V2 = np.nansum(weights ** 2)
@@ -866,18 +886,20 @@ def _bin(nbins, phase, time, flux, flux_err):
             sample_variance = (np.nansum(weights *
                                          (flux_to_bin - weighted_mean) ** 2) /
                                (V1 - V2 / V1))
-            stdev = np.sqrt(sample_variance) / np.sqrt(len(flux_to_bin) - 1)
+            stdev = np.sqrt(sample_variance) / np.sqrt(N - 1)
 
-            binned_time = np.append(binned_time, np.mean(time_to_bin))
-            binned_flux = np.append(binned_flux, weighted_mean)
-            binned_error = np.append(binned_error, stdev)
+            if median:
+                import robustats
+                binned_flux = np.append(binned_flux,
+                                        robustats.weighted_median(flux_to_bin,
+                                                                  weights))
+                binned_error = np.append(binned_error, stdev *
+                                         np.sqrt(N * np.pi / (2 * (N - 1))))
+            else:
+                binned_flux = np.append(binned_flux, weighted_mean)
+                binned_error = np.append(binned_error, stdev)
 
-        else:
-            binned_time = np.append(binned_time, np.mean(time_to_bin))
-            binned_flux = np.append(binned_flux, np.array([np.nan]))
-            binned_error = np.append(binned_error, np.array([np.nan]))
-
-    return binned_phase, binned_time, binned_flux, binned_error
+    return binned_x, binned_flux, binned_error
 
 
 def _offset_correction(phases, fluxes, weights):
