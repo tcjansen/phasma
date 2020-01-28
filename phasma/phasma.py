@@ -88,9 +88,15 @@ class Phasecurve(object):
             Set to None to return all data points (excluding outliers).
             Default is 500.
         offset_correction : bool, optional
-            NEEDs WORK. Finds the DC offsets which minimizes the cost function
+            NEEDS WORK. Finds the DC offsets which minimizes the cost function
             defined in Jansen & Kipping 2018 (see Figure 5 and Section
             2.7 for a more detailed explanation). Default is False.
+        medianbin : bool, optional
+            NEEDS TO BE CHECKED. Set to True if you wish to do weighted median
+            binning instead of weighted average binning. Default is False.
+        return_lc : bool, optional
+            Set to True to return the unfolded phase curve (i.e. time, flux,
+            flux_err). WIL NOT return the phase curve. Default is False.
         """
         self.period = period
         self.transit_duration = transit_duration
@@ -542,6 +548,12 @@ class Tess(Phasecurve):
             Finds the DC offsets which minimizes the cost function
             defined in Jansen & Kipping 2018 (see Figure 5 and Section
             2.7 for a more detailed explanation). Default is False.
+        medianbin : bool, optional
+            NEEDS TO BE CHECKED. Set to True if you wish to do weighted median
+            binning instead of weighted average binning. Default is False.
+        return_lc : bool, optional
+            Set to True to return the unfolded phase curve (i.e. time, flux,
+            flux_err). WIL NOT return the phase curve. Default is False.
         """
         super().__init__(period, transit_duration, transit_epoch,
                          transit_duration_buff=transit_duration_buff,
@@ -726,6 +738,12 @@ class Kepler(Phasecurve):
             Finds the DC offsets which minimizes the cost function
             defined in Jansen & Kipping 2018 (see Figure 5 and Section
             2.7 for a more detailed explanation). Default is False.
+        medianbin : bool, optional
+            NEEDS TO BE CHECKED. Set to True if you wish to do weighted median
+            binning instead of weighted average binning. Default is False.
+        return_lc : bool, optional
+            Set to True to return the unfolded phase curve (i.e. time, flux,
+            flux_err). WIL NOT return the phase curve. Default is False.
         """
         super().__init__(period, transit_duration, transit_epoch,
                          transit_duration_buff=transit_duration_buff,
