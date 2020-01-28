@@ -34,7 +34,7 @@ class Phasecurve(object):
                  plot_clean_lc=False, plot_raw_lc=False, transit_at_0=True,
                  cleaning_window=False, save=True, filename=False,
                  mask_primary=False, mask_secondary=False, nphasebins=500,
-                 offset_correction=False, medianbin=False):
+                 offset_correction=False, medianbin=False, return_lc=False):
         """
 
         Parameters
@@ -106,6 +106,7 @@ class Phasecurve(object):
         self.nphasebins = nphasebins
         self.offset_correction = offset_correction
         self.medianbin = medianbin
+        self.return_lc = return_lc
 
     def write(self, directory=None, filename=False):
         """Writes the phase curve to a csv file."""
@@ -152,7 +153,7 @@ class Phasecurve(object):
     def _plot_raw_lc(self, show=True, save=False, file_format='png'):
         """Plots the raw light curve. (NEEDS REVIEW)"""
         plt.figure(figsize=(16, 5))
-        plt.scatter(self._raw_time, self._raw_flux,
+        plt.scatter(self.raw_time, self.raw_flux,
                     color='black')
         if show:
             plt.show()
@@ -175,9 +176,9 @@ class Phasecurve(object):
     def _split_lc_at_gap(self, true_gap_starts, true_gap_ends):
         """Splits the light curve into separate lists where significant
         gaps occur"""
-        t = self._raw_time
-        flux = self._raw_flux
-        flux_err = self._raw_flux_err
+        t = self.raw_time
+        flux = self.raw_flux
+        flux_err = self.raw_flux_err
         period = self.period.to(u.day).value
         cadence = self.cadence.to(u.day).value
 
@@ -294,9 +295,17 @@ class Phasecurve(object):
             trans_window = (self.transit_duration_buff *
                             self.transit_duration / 100
                             ).to(u.day).value
-            min_window = 10 * self.cadence.to(u.day).value
+            min_window = 11 * self.cadence.to(u.day).value
             self.cleaning_window = (np.maximum(trans_window, min_window) /
                                     self.period.to(u.day).value)
+
+        if (self.cleaning_window >
+           self.transit_duration.to(u.day).value / 3 and
+           self.transit_duration.to(u.day).value != 0):
+            print('The transit duration is too short for effective outlier ' +
+                  'removal')
+            print('PHASMA FAIL - see line above')
+            exit()
 
         (trimmed_t,
          trimmed_flux,
@@ -309,7 +318,8 @@ class Phasecurve(object):
                trimmed_flux_err)
 
         # remove outliers
-        outlier_cutoff = (1.4826 * stats.median_absolute_deviation(res) *
+        MAD = np.nanmedian(np.absolute(res - np.nanmedian(res)))
+        outlier_cutoff = (1.4826 * MAD *
                           np.sqrt(2) * erfcinv(1 / len(res)))
         outliers = abs(res) > outlier_cutoff
 
@@ -324,12 +334,12 @@ class Phasecurve(object):
 
         if self.plot_clean_lc or self.plot_raw_lc:
             plt.figure(figsize=(16, 5))
-            plt.scatter(self._raw_time, self._raw_flux, color='black')
+            plt.scatter(self.raw_time, self.raw_flux, color='black')
             if self.plot_raw_lc and not self.plot_clean_lc:
                 plt.show()
 
         # split the data by saving to temporary fits files
-        true_gap_starts, true_gap_ends = self._locate_gaps(self._raw_time)
+        true_gap_starts, true_gap_ends = self._locate_gaps(self.raw_time)
         (split_time,
          split_flux,
          split_flux_err) = self._split_lc_at_gap(true_gap_starts,
@@ -338,7 +348,6 @@ class Phasecurve(object):
         if self.offset_correction:
             # create empty arrays to store data
             pji = np.zeros((len(split_time), self.nphasebins))
-            tji = np.zeros((len(split_time), self.nphasebins))
             fji = np.zeros((len(split_time), self.nphasebins))
             wji = np.zeros((len(split_time), self.nphasebins))
 
@@ -425,7 +434,6 @@ class Phasecurve(object):
                  bin_flux_err) = _bin(self.nphasebins, p, f, ferr)
 
                 # put the binned phase curve into one big array
-                tji[continuous] = bin_time
                 pji[continuous] = bin_phase
                 fji[continuous] = bin_flux
                 wji[continuous] = 1 / (bin_flux_err ** 2)
@@ -437,7 +445,10 @@ class Phasecurve(object):
             # correct for the arbitrary offset created by
             # the moving median filter
             phase, flux, flux_err = _offset_correction(pji, fji, wji)
-            return phase, np.mean(tji, axis=0), flux, flux_err
+            return phase, flux, flux_err
+
+        if self.return_lc:
+            return time_all, flux_all, flux_err_all
 
         phase_all = self._phase(time_all)
 
@@ -464,7 +475,8 @@ class Tess(Phasecurve):
                  remove_fits=False, plot_clean_lc=False, plot_raw_lc=False,
                  transit_at_0=True, cleaning_window=False, save=True,
                  filename=False, mask_primary=False, mask_secondary=False,
-                 nphasebins=500, offset_correction=False, medianbin=False):
+                 nphasebins=500, offset_correction=False, medianbin=False,
+                 return_lc=False):
         """
 
         Parameters
@@ -539,7 +551,7 @@ class Tess(Phasecurve):
                          filename=filename, mask_primary=mask_primary,
                          mask_secondary=mask_secondary, nphasebins=nphasebins,
                          offset_correction=offset_correction,
-                         medianbin=medianbin)
+                         medianbin=medianbin, return_lc=return_lc)
 
         # make a directory for this target if it doesn't aready exist
         self.tic_dir = './' + str(tic)
@@ -550,15 +562,20 @@ class Tess(Phasecurve):
         self.sectors = sectors
         self.remove_curl = remove_curl
 
-        (self._raw_time,
-         self._raw_flux,
-         self._raw_flux_err) = self._get_raw_lightcurve()
+        (self.raw_time,
+         self.raw_flux,
+         self.raw_flux_err) = self._get_raw_lightcurve()
 
-        self.cadence = stats.mode(np.diff(self._raw_time)).mode[0] * u.day
+        self.cadence = stats.mode(np.diff(self.raw_time)).mode[0] * u.day
 
-        (self.phase,
-         self.flux,
-         self.flux_err) = self._wrap()
+        if return_lc:
+            (self.time,
+             self.flux,
+             self.flux_err) = self._wrap()
+        else:
+            (self.phase,
+             self.flux,
+             self.flux_err) = self._wrap()
 
         if save:
             self.write(directory=self.tic_dir, filename=filename)
@@ -572,6 +589,7 @@ class Tess(Phasecurve):
         time = np.array([])
         flux = np.array([])
         flux_err = np.array([])
+        contaminations = []
         for sector in self.sectors:
 
             try:
@@ -598,6 +616,7 @@ class Tess(Phasecurve):
                                 'file/?uri=mast:TESS/product/')
                     for curl in toi_curls:
                         fits_file = curl[16:71]
+
                         if not os.path.isfile(self.tic_dir + '/' + fits_file):
                             print('Downloading the fits files for TIC ' +
                                   self.tic + " in sector " + str(sector) +
@@ -610,10 +629,13 @@ class Tess(Phasecurve):
                 if self.remove_curl:
                     os.remove(curl_sh_path)
 
+                fits_path = self.tic_dir + '/' + fits_file
+
+                # store the blending/contamination factors
+                contaminations += [_contamination_factor(fits_path)]
+
                 # unpack the fits file
-                raw_time, raw_flux, raw_flux_err = _unpack_fits(self.tic_dir +
-                                                                '/' +
-                                                                fits_file,
+                raw_time, raw_flux, raw_flux_err = _unpack_fits(fits_path,
                                                                 'QUALITY')
                 time = np.append(time, raw_time)
                 flux = np.append(flux, raw_flux)
@@ -622,6 +644,9 @@ class Tess(Phasecurve):
                 # delete the fits file to save space
                 if self.remove_fits:
                     os.remove(fits_file)
+
+                # set the blending/contamination factor
+                self.contaminations = np.array(contaminations)
 
                 # FIX
                 self.actual_sectors += [sector]
@@ -640,7 +665,7 @@ class Kepler(Phasecurve):
                  plot_raw_lc=False, transit_at_0=True,
                  cleaning_window=False, save=True, filename=False,
                  mask_primary=False, mask_secondary=False, nphasebins=500,
-                 offset_correction=False, medianbin=False):
+                 offset_correction=False, medianbin=False, return_lc=False):
         """
         Returns the phase curve of an object of interest observed by TESS.
 
@@ -710,7 +735,7 @@ class Kepler(Phasecurve):
                          filename=filename, mask_primary=mask_primary,
                          mask_secondary=mask_secondary, nphasebins=nphasebins,
                          offset_correction=offset_correction,
-                         medianbin=medianbin)
+                         medianbin=medianbin, return_lc=return_lc)
 
         # make a directory for this target if it doesn't aready exist
         self.kic_dir = './' + str(kic)
@@ -721,15 +746,20 @@ class Kepler(Phasecurve):
 
         self.cadence_str = cadence[0] + 'l' + cadence[1]
 
-        (self._raw_time,
-         self._raw_flux,
-         self._raw_flux_err) = self._get_raw_lightcurve()
+        (self.raw_time,
+         self.raw_flux,
+         self.raw_flux_err) = self._get_raw_lightcurve()
 
-        self.cadence = stats.mode(np.diff(self._raw_time)).mode[0] * u.day
+        self.cadence = stats.mode(np.diff(self.raw_time)).mode[0] * u.day
 
-        (self.phase,
-         self.flux,
-         self.flux_err) = self._wrap()
+        if return_lc:
+            (self.time,
+             self.flux,
+             self.flux_err) = self._wrap()
+        else:
+            (self.phase,
+             self.flux,
+             self.flux_err) = self._wrap()
 
         if save:
             self.write(directory=self.kic_dir, filename=filename)
@@ -785,6 +815,10 @@ class Kepler(Phasecurve):
         return time, flux, flux_err
 
 
+def _contamination_factor(fits_path):
+    return fits.open(fits_path)[1].header['CROWDSAP']
+
+
 def _unpack_fits(fits_path, quality_str):
     """Removes "bad data" and normalizes the flux by the median"""
     open_fits = fits.open(fits_path)
@@ -798,10 +832,10 @@ def _unpack_fits(fits_path, quality_str):
     good_data = (data_quality == 0) & (~np.isnan(raw_flux))
 
     raw_time = raw_time[good_data]
-    norm_flux = raw_flux[good_data] / np.median(raw_flux[good_data])
-    norm_flux_err = raw_flux_err[good_data] / np.median(raw_flux[good_data])
+    raw_flux = raw_flux[good_data]
+    raw_flux_err = raw_flux_err[good_data]
 
-    return raw_time, norm_flux, norm_flux_err
+    return raw_time, raw_flux, raw_flux_err
 
 
 def _moving_median(x, y, y_err, window_size):
@@ -831,8 +865,8 @@ def _phasma_detrend(P, time, flux, flux_err):
      trimmed_flux_err,
      moving_med_func) = _moving_median(time, flux, flux_err, window_size)
     return (trimmed_t,
-            (trimmed_flux / moving_med_func(trimmed_t) - 1) * 1e6,
-            trimmed_flux_err * 1e6)
+            (trimmed_flux / moving_med_func(trimmed_t) - 1),
+            trimmed_flux_err / moving_med_func(trimmed_t))
 
 
 def _redefine_phase(phase, flux, flux_err):
@@ -898,6 +932,10 @@ def _bin(nbins, x, flux, flux_err, median=False):
             else:
                 binned_flux = np.append(binned_flux, weighted_mean)
                 binned_error = np.append(binned_error, stdev)
+
+        else:
+            binned_flux = np.append(binned_flux, np.array([np.nan]))
+            binned_error = np.append(binned_error, np.array([np.nan]))
 
     return binned_x, binned_flux, binned_error
 
